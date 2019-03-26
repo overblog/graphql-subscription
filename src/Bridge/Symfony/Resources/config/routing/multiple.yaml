@@ -1,0 +1,8 @@
+overblog_graphql_subscription_multiple_endpoint:
+    path: /{schemaName}
+    methods: POST
+    defaults:
+        _controller: Overblog\GraphQLBundle\Controller\SubscriptionController::createAction
+        _format: "json"
+    requirements:
+        schemaName: '[^/]+'

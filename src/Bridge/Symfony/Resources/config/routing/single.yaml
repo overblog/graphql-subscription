@@ -1,0 +1,6 @@
+overblog_graphql_subscription_endpoint:
+    path: /
+    methods: POST
+    defaults:
+        _controller: Overblog\GraphQLBundle\Controller\SubscriptionController::createAction
+        _format: "json"
