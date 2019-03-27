@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Storage;
 
-use Overblog\GraphQLSubscription\Model\Subscriber;
-use Symfony\Component\Finder\Finder;
+use Overblog\GraphQLSubscription\Entity\Subscriber;
 
 final class FilesystemSubscribeStorage implements SubscribeStorageInterface
 {
@@ -13,10 +12,10 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
 
     private $compress;
 
-    public function __construct(string $directory)
+    public function __construct(string $directory, int $mask = 0777)
     {
         if (!\file_exists($directory)) {
-            @\mkdir($directory, 0777, true);
+            @\mkdir($directory, $mask, true);
         }
 
         $this->directory = $directory;
@@ -46,14 +45,16 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
      */
     public function findSubscribersByChannelAndSchemaName(string $channel, ?string $schemaName): iterable
     {
-        $finder = new Finder();
-        $finder->in($this->directory)
-            ->files()
-            ->name(\sprintf('#%--s%s$#', \preg_quote($channel), $schemaName ? '@'.\preg_quote($schemaName) : ''));
+        $pattern = \sprintf(
+            '%s/*--%s%s',
+            $this->directory,
+            $channel,
+            $schemaName ? '@'.$schemaName : ''
+        );
 
-        foreach ($finder as $file) {
+        foreach (\glob($pattern) as $filename) {
             try {
-                yield $this->unserialize($file->getContents());
+                yield $this->unserialize(\file_get_contents($filename));
             } catch (\Throwable $e) {
                 // Ignoring files that could not be unserialized
             }

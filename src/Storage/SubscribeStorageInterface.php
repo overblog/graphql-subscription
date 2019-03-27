@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Storage;
 
-use Overblog\GraphQLSubscription\Model\Subscriber;
+use Overblog\GraphQLSubscription\Entity\Subscriber;
 
 interface SubscribeStorageInterface
 {
@@ -23,7 +23,7 @@ interface SubscribeStorageInterface
      * @param string $channel
      * @param string $schemaName
      *
-     * @return Subscriber[]|iterable
+     * @return Subscriber[]|iterable|\Generator
      */
     public function findSubscribersByChannelAndSchemaName(string $channel, ?string $schemaName): iterable;
 }

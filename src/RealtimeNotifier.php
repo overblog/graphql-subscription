@@ -8,7 +8,7 @@ use GraphQL\Error\SyntaxError;
 use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Language\AST\OperationDefinitionNode;
 use GraphQL\Language\Parser;
-use Overblog\GraphQLSubscription\Model\Subscriber;
+use Overblog\GraphQLSubscription\Entity\Subscriber;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -43,14 +43,14 @@ final class RealtimeNotifier
     /**
      * RealtimeNotifier constructor.
      *
-     * @param Publisher                 $publisher
+     * @param Publisher|callable        $publisher
      * @param SubscribeStorageInterface $subscribeStorage
      * @param callable                  $executor         should return the result payload as an array
      * @param string                    $topicUrlPattern
      * @param LoggerInterface|null      $logger
      */
     public function __construct(
-        Publisher $publisher,
+        callable $publisher,
         SubscribeStorageInterface $subscribeStorage,
         callable $executor,
         string $topicUrlPattern,

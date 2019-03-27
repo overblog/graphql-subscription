@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Tests;
 
-use Overblog\GraphQLSubscription\Model\Subscriber;
+use Overblog\GraphQLSubscription\Entity\Subscriber;
 use Overblog\GraphQLSubscription\RealtimeNotifier;
+use Overblog\GraphQLSubscription\Storage\MemorySubscriptionStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use Overblog\GraphQLSubscription\Update;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -16,8 +17,8 @@ use Symfony\Component\Messenger\MessageBus;
 
 class RealtimeNotifierTest extends TestCase
 {
-    private const URL = 'https://example.test/hub';
-    private const JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.OPker5jU6ePTLigtCI8WbYgOpfNvI-dClddsjsiFXh4';
+    public const URL = 'https://example.test/hub';
+    public const JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.OPker5jU6ePTLigtCI8WbYgOpfNvI-dClddsjsiFXh4';
 
     private $expectedPostData = [];
 
@@ -45,26 +46,7 @@ class RealtimeNotifierTest extends TestCase
             }
         );
 
-        $this->memorySubscribeStorage = new class() implements SubscribeStorageInterface {
-            /** @var Subscriber[] */
-            private $storage = [];
-
-            public function store(Subscriber $subscriber): bool
-            {
-                $this->storage[] = $subscriber;
-
-                return true;
-            }
-
-            public function findSubscribersByChannelAndSchemaName(string $channel, ?string $schemaName): iterable
-            {
-                foreach ($this->storage as $subscriber) {
-                    if ($subscriber->getChannel() === $channel && $subscriber->getSchemaName() === $schemaName) {
-                        yield $subscriber;
-                    }
-                }
-            }
-        };
+        $this->memorySubscribeStorage = new MemorySubscriptionStorage([]);
         $this->executor = $this->createPartialMock(\stdClass::class, ['__invoke']);
 
         $this->realtimeNotifier = new RealtimeNotifier(

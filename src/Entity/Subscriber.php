@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overblog\GraphQLSubscription\Model;
+namespace Overblog\GraphQLSubscription\Entity;
 
 final class Subscriber implements \Serializable
 {

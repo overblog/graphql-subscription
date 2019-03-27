@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription;
 
-use Overblog\GraphQLSubscription\Model\Subscriber;
+use Overblog\GraphQLSubscription\Entity\Subscriber;
 
 final class RootValue
 {
@@ -23,7 +23,7 @@ final class RootValue
         return $this->propagationStopped;
     }
 
-    public function stopPropagation()
+    public function stopPropagation(): void
     {
         $this->propagationStopped = true;
     }

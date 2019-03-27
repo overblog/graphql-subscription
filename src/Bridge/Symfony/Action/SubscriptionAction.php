@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\Action;
 
-use Overblog\GraphQLSubscription\Event\SubscriptionExtraEvent;
 use Overblog\GraphQLBundle\Controller\CorsResponseHandlerTrait;
+use Overblog\GraphQLSubscription\Bridge\Symfony\Event\SubscriptionExtraEvent;
 use Overblog\GraphQLSubscription\RealtimeNotifier;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -28,13 +28,13 @@ class SubscriptionAction
     ) {
         $this->jwtSubscribeProvider = $jwtSubscribeProvider;
         $this->requestParser = $requestParser;
-        $this->responseHandler = $responseHandler ?? [$this, 'createJsonResponses'];
+        $this->responseHandler = $responseHandler ?? [$this, 'createJsonResponse'];
     }
 
     public function __invoke(
         Request $request,
         RealtimeNotifier $realtimeNotifier,
-        ?EventDispatcherInterface $dispatcher,
+        ?EventDispatcherInterface $dispatcher = null,
         ?string $schemaName = null
     ): Response {
         return ($this->responseHandler)($request, function (Request $request) use ($schemaName, $realtimeNotifier, $dispatcher): array {
