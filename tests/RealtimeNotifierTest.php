@@ -61,13 +61,7 @@ class RealtimeNotifierTest extends TestCase
     {
         $this->memorySubscribeStorage->store(
             new Subscriber(
-                'myID',
-            'https://graphql.org/subscriptions/myID',
-            'subscription { inbox { message } }',
-            'inbox',
-            null,
-            null,
-            null
+                'https://graphql.org/subscriptions/myID', 'subscription { inbox { message } }', 'inbox', null, null, null
             )
         );
         $this->executor
@@ -88,13 +82,7 @@ class RealtimeNotifierTest extends TestCase
     {
         $this->memorySubscribeStorage->store(
             new Subscriber(
-                'myID',
-                'https://graphql.org/subscriptions/myID',
-                'subscription { inbox { message } }',
-                'inbox',
-                null,
-                null,
-                null
+                'https://graphql.org/subscriptions/myID', 'subscription { inbox { message } }', 'inbox', null, null, null
             )
         );
         $this->executor

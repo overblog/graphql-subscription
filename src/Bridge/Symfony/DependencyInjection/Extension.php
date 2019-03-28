@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\DependencyInjection;
 
 use Overblog\GraphQLSubscription\Provider\JwtPublishProvider;
-use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\RealtimeNotifier;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
@@ -26,47 +25,57 @@ class Extension extends BaseExtension
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('subscription.yml');
 
-        $hub = $config['subscriptions']['mercure'];
+        $this->setMercureHubDefinitionArgs($config, $container);
+        $this->setJwtProvidersDefinitions($config, $container);
+        $this->setStorageDefinitions($config, $container);
+        $this->setRealtimeNotifierDefinitionArgs($config, $container);
+    }
 
-        // set hubUrl
-        $container->findDefinition(\sprintf('%s.subscription_publisher', $this->getAlias()))
-            ->replaceArgument(0, $hub['url']);
-        // jwt publish and subscribe providers
-        $jwtPublishProviderID = \sprintf('%s.subscription_jwt_publish_provider', $this->getAlias());
-        if (JwtPublishProvider::class === $hub['jwt']['publish_provider']) {
-            $container->register($jwtPublishProviderID, JwtPublishProvider::class)
-                ->addArgument($hub['jwt']['publish_secret_key']);
-        } else {
-            $container->setAlias($jwtPublishProviderID, $hub['jwt']['publish_provider']);
-        }
-        $jwtSubscribeProviderID = \sprintf('%s.subscription_jwt_subscribe_provider', $this->getAlias());
-        if (JwtSubscribeProvider::class === $hub['jwt']['subscribe_provider']) {
-            $container->register($jwtSubscribeProviderID, JwtSubscribeProvider::class)
-                ->addArgument($hub['jwt']['subscribe_secret_key']);
-        } else {
-            $container->setAlias($jwtSubscribeProviderID, $hub['jwt']['subscribe_provider']);
-        }
-
-        // storage
-        $storageID = $config['subscriptions']['storage']['handler_id'];
-        if (FilesystemSubscribeStorage::class === $storageID) {
-            $container->register(SubscribeStorageInterface::class, $storageID)
-                ->setArguments([$config['subscriptions']['storage']['path']]);
-        } else {
-            $container->setAlias(SubscribeStorageInterface::class, $storageID);
-        }
-
-        // realtime notifier topic url pattern and bus
-        $bus = $config['subscriptions']['bus'] ?? null;
+    private function setRealtimeNotifierDefinitionArgs(array $config, ContainerBuilder $container): void
+    {
+        $bus = $config['bus'] ?? null;
         $attributes = null === $bus ? [] : ['bus' => $bus];
 
         $realtimeNotifierDefinition = $container->findDefinition(RealtimeNotifier::class)
-            ->replaceArgument(3, $config['subscriptions']['topic_url_pattern'])
+            ->replaceArgument(3, $config['topic_url_pattern'])
             ->addTag('messenger.message_handler', $attributes);
         if (\class_exists('Symfony\\Component\\Messenger\\MessageBusInterface')) {
             $realtimeNotifierDefinition
                 ->addMethodCall('setBus', [new Reference($bus ?? MessageBusInterface::class)]);
         }
+    }
+
+    private function setStorageDefinitions(array $config, ContainerBuilder $container): void
+    {
+        $storageID = $config['storage']['handler_id'];
+        if (FilesystemSubscribeStorage::class === $storageID) {
+            $container->register(SubscribeStorageInterface::class, $storageID)
+                ->setArguments([$config['storage']['path']]);
+        } else {
+            $container->setAlias(SubscribeStorageInterface::class, $storageID);
+        }
+    }
+
+    private function setJwtProvidersDefinitions(array $config, ContainerBuilder $container): void
+    {
+        $jwtProviders = $config['mercure_hub']['jwt'];
+
+        foreach ($jwtProviders as $type => $options) {
+            // jwt publish and subscribe providers
+            $jwtProviderID = \sprintf('%s.subscription_jwt_%s_provider', $this->getAlias(), $type);
+            if (JwtPublishProvider::class === $options['provider']) {
+                $container->register($jwtProviderID, JwtPublishProvider::class)
+                    ->addArgument($options['secret_key']);
+            } else {
+                $container->setAlias($jwtProviderID, $options['provider']);
+            }
+        }
+    }
+
+    private function setMercureHubDefinitionArgs(array $config, ContainerBuilder $container): void
+    {
+        $container->findDefinition(\sprintf('%s.subscription_publisher', $this->getAlias()))
+            ->replaceArgument(0, $config['mercure_hub']['url']);
     }
 
     public function getAlias()

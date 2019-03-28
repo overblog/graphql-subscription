@@ -158,14 +158,7 @@ final class RealtimeNotifier
             $topic = $this->buildTopicUrl($id, $channel, $schemaName);
 
             $this->getSubscribeStorage()->store(new Subscriber(
-                $id,
-                $topic,
-                $payload['query'],
-                $channel,
-                $payload['variables'],
-                $payload['operationName'],
-                $schemaName,
-                $extra
+                $topic, $payload['query'], $channel, $payload['variables'], $payload['operationName'], $schemaName, $extra
             ));
 
             return [

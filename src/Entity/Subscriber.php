@@ -6,7 +6,6 @@ namespace Overblog\GraphQLSubscription\Entity;
 
 final class Subscriber implements \Serializable
 {
-    private $id;
     private $topic;
     private $query;
     private $channel;
@@ -16,16 +15,8 @@ final class Subscriber implements \Serializable
     private $extras;
 
     public function __construct(
-        string $id,
-        string $topic,
-        string $query,
-        string $channel,
-        ?array $variables,
-        ?string $operatorName,
-        ?string $schemaName,
-        array $extras = []
+        string $topic, string $query, string $channel, ?array $variables, ?string $operatorName, ?string $schemaName, array $extras = []
     ) {
-        $this->id = $id;
         $this->topic = $topic;
         $this->query = $query;
         $this->channel = $channel;
@@ -33,11 +24,6 @@ final class Subscriber implements \Serializable
         $this->operatorName = $operatorName;
         $this->schemaName = $schemaName;
         $this->extras = $extras;
-    }
-
-    public function getId(): string
-    {
-        return $this->id;
     }
 
     public function getTopic(): string

@@ -7,12 +7,14 @@ namespace Overblog\GraphQLSubscription\Tests\Bridge\Symfony\Action;
 use Lcobucci\JWT\Parser;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Overblog\GraphQLSubscription\Bridge\Symfony\Action\SubscriptionAction;
+use Overblog\GraphQLSubscription\Bridge\Symfony\Event\SubscriptionExtraEvent;
 use Overblog\GraphQLSubscription\Entity\Subscriber;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\RealtimeNotifier;
 use Overblog\GraphQLSubscription\Storage\MemorySubscriptionStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 
 class SubscriptionActionTest extends TestCase
@@ -51,6 +53,28 @@ GQL;
      * @param string|null $expectedSchemaName
      * @dataProvider getSchemaNameDataProvider
      */
+    public function testSubscriptionExtraEvent(?string $expectedSchemaName): void
+    {
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(SubscriptionExtraEvent::class, function (SubscriptionExtraEvent $event): void {
+            $event->getExtra()['foo'] = 'bar';
+        });
+
+        [, $storage] = $this->processResponse(
+            ['data' => ['inbox' => null]],
+            $expectedSchemaName,
+            self::SUBSCRIPTION_QUERY,
+            $dispatcher
+        );
+        /** @var Subscriber $subscriber */
+        $subscriber = $storage->findSubscribersByChannelAndSchemaName('inbox', $expectedSchemaName)->current();
+        $this->assertSame('bar', $subscriber->getExtras()['foo']);
+    }
+
+    /**
+     * @param string|null $expectedSchemaName
+     * @dataProvider getSchemaNameDataProvider
+     */
     public function testCreateActionFailed(?string $expectedSchemaName): void
     {
         $graphqlPayload = [
@@ -83,8 +107,12 @@ GQL;
         yield ['foo'];
     }
 
-    private function processResponse(array $expectedPayload, ?string $expectedSchemaName, string $query = self::SUBSCRIPTION_QUERY): array
-    {
+    private function processResponse(
+        array $expectedPayload,
+        ?string $expectedSchemaName,
+        string $query = self::SUBSCRIPTION_QUERY,
+        ?EventDispatcher $dispatcher = null
+    ): array {
         $request = new Request(
             [],
             [],
@@ -121,7 +149,7 @@ GQL;
                         return $expectedPayload;
                     }
                 ),
-                null,
+                $dispatcher,
                 $expectedSchemaName
             ),
             $storage,
