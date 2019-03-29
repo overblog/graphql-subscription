@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLSubscription;
 
 use GraphQL\Error\SyntaxError;
+use GraphQL\Executor\ExecutionResult;
 use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Language\AST\OperationDefinitionNode;
 use GraphQL\Language\Parser;
@@ -141,6 +142,10 @@ final class RealtimeNotifier
         callable $idGenerator = null
     ): array {
         $result = ($this->executor)($schemaName, $payload);
+        if ($result instanceof ExecutionResult) {
+            $result = $result->toArray();
+        }
+
         if (empty($result['errors'])) {
             $document = self::parseQuery($payload['query']);
             $operationDef = self::extractOperationDefinition($document, $payload['operationName']);
