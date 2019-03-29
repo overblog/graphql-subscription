@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Tests;
 
+use GraphQL\Executor\ExecutionResult;
 use Overblog\GraphQLSubscription\Entity\Subscriber;
 use Overblog\GraphQLSubscription\RealtimeNotifier;
+use Overblog\GraphQLSubscription\RootValue;
 use Overblog\GraphQLSubscription\Storage\MemorySubscriptionStorage;
-use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use Overblog\GraphQLSubscription\Update;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Messenger\Envelope;
@@ -20,88 +20,85 @@ class RealtimeNotifierTest extends TestCase
     public const URL = 'https://example.test/hub';
     public const JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.OPker5jU6ePTLigtCI8WbYgOpfNvI-dClddsjsiFXh4';
 
-    private $expectedPostData = [];
-
-    /** @var SubscribeStorageInterface */
-    private $memorySubscribeStorage;
-
-    /** @var MockObject|callable */
-    private $executor;
-
-    /** @var RealtimeNotifier */
-    private $realtimeNotifier;
-
-    public function setUp(): void
-    {
-        $publisher = new Publisher(
-            self::URL,
-            function (): string {
-                return self::JWT;
-            },
-            function (string $url, string $jwt, string $postData): string {
-                \parse_str($postData, $actualPostData);
-                $this->assertSame($this->expectedPostData, $actualPostData);
-
-                return 'myID';
-            }
-        );
-
-        $this->memorySubscribeStorage = new MemorySubscriptionStorage([]);
-        $this->executor = $this->createPartialMock(\stdClass::class, ['__invoke']);
-
-        $this->realtimeNotifier = new RealtimeNotifier(
-            $publisher,
-            $this->memorySubscribeStorage,
-            $this->executor,
-            'https://graphql.org/subscriptions/{id}'
-        );
-    }
-
     public function testNotifyWithoutBus(): void
     {
-        $this->memorySubscribeStorage->store(
-            new Subscriber(
-                'https://graphql.org/subscriptions/myID', 'subscription { inbox { message } }', 'inbox', null, null, null
-            )
-        );
-        $this->executor
-            ->expects($this->once())
-            ->method('__invoke')
-            ->willReturn(['inbox' => ['message' => 'hello word!']])
-        ;
-        $this->realtimeNotifier->notify('inbox', []);
-        $this->expectedPostData = [
+        $executor = $this->createExecutor();
+        $publisher = $this->createPublisher([
             'topic' => 'https://graphql.org/subscriptions/myID',
             'data' => '{"type":"data","payload":{"data":{"inbox":{"message":"hello word!"}}}}',
             'target' => 'https://graphql.org/subscriptions/myID',
-        ];
-        $this->realtimeNotifier->processNotificationsSpool();
+        ]);
+        $realtimeNotifier = $this->createRealtimeNotifier($publisher, $executor);
+        $executor
+            ->expects($this->once())
+            ->method('__invoke')
+            ->willReturnCallback(function (?string $schemaName, array $requestParams, ?RootValue $rootValue) {
+                return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
+            })
+        ;
+        $realtimeNotifier->notify('inbox', ['message' => 'hello word!']);
+        $realtimeNotifier->processNotificationsSpool(false);
     }
 
     public function testNotificationShouldBeSentOnlyOnProcessSPoolWithoutBus(): void
     {
-        $this->memorySubscribeStorage->store(
-            new Subscriber(
-                'https://graphql.org/subscriptions/myID', 'subscription { inbox { message } }', 'inbox', null, null, null
-            )
-        );
-        $this->executor
+        $executor = $this->createExecutor();
+        $realtimeNotifier = $this->createRealtimeNotifier($this->createPublisher(), $executor);
+        $executor
             ->expects($this->never())
             ->method('__invoke')
         ;
-        $this->realtimeNotifier->notify('inbox', []);
-        $this->realtimeNotifier->notify('inbox', []);
+        $realtimeNotifier->notify('inbox', []);
+        $realtimeNotifier->notify('inbox', []);
     }
 
     public function testNotifyWithBus(): void
     {
+        $realtimeNotifier = $this->createRealtimeNotifier($this->createPublisher(), $this->createExecutor());
         $messageBus = $this->getMockBuilder(MessageBus::class)->setMethods(['dispatch'])->getMock();
         $messageBus->expects($this->once())
             ->method('dispatch')
             ->with(new Update('a:3:{s:7:"payload";a:1:{s:5:"inbox";a:1:{s:7:"message";s:3:"Hi!";}}s:10:"schemaName";s:8:"mySchema";s:7:"channel";s:5:"inbox";}'))
             ->willReturn(new Envelope(new \stdClass()));
 
-        $this->realtimeNotifier->setBus($messageBus);
-        $this->realtimeNotifier->notify('inbox', ['inbox' => ['message' => 'Hi!']], 'mySchema');
+        $realtimeNotifier->setBus($messageBus);
+        $realtimeNotifier->notify('inbox', ['inbox' => ['message' => 'Hi!']], 'mySchema');
+    }
+
+    private function createRealtimeNotifier(callable $publisher, $executor, ?array $storage = null): RealtimeNotifier
+    {
+        $storage = $storage ?? [
+            new Subscriber(
+        'https://graphql.org/subscriptions/myID', 'subscription { inbox { message } }', 'inbox', null, null, null
+            ),
+        ];
+
+        return new RealtimeNotifier(
+            $publisher,
+            new MemorySubscriptionStorage($storage),
+            $executor,
+            'https://graphql.org/subscriptions/{id}'
+        );
+    }
+
+    private function createExecutor()
+    {
+        return $this->createPartialMock(\stdClass::class, ['__invoke']);
+    }
+
+    private function createPublisher(array $expectedPostData = [], ?callable $jwtProvider = null, ?string $hubUrl = self::URL): Publisher
+    {
+        return new Publisher(
+            $hubUrl,
+            $jwtProvider ?? function (): string {
+                return self::JWT;
+            },
+            function (string $url, string $jwt, string $postData) use ($expectedPostData): string {
+                \parse_str($postData, $actualPostData);
+                $this->assertSame($expectedPostData, $actualPostData);
+
+                return 'myID';
+            }
+        );
     }
 }

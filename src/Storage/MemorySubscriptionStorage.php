@@ -17,13 +17,13 @@ final class MemorySubscriptionStorage implements SubscribeStorageInterface
     public function __construct(iterable $storage = null)
     {
         if (null !== $storage) {
-            foreach ($storage as $subscriber) {
-                $this->store($subscriber);
+            foreach ($storage as $id => $subscriber) {
+                $this->store((string) $id, $subscriber);
             }
         }
     }
 
-    public function store(Subscriber $subscriber): bool
+    public function store(string $id, Subscriber $subscriber): bool
     {
         $this->storage[] = $subscriber;
 

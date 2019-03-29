@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\Action;
 
-use Overblog\GraphQLBundle\Controller\CorsResponseHandlerTrait;
 use Overblog\GraphQLSubscription\Bridge\Symfony\Event\SubscriptionExtraEvent;
 use Overblog\GraphQLSubscription\RealtimeNotifier;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -15,20 +14,15 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class SubscriptionAction
 {
-    use CorsResponseHandlerTrait;
-
     private $jwtSubscribeProvider;
     private $requestParser;
-    private $responseHandler;
 
     public function __construct(
         callable $jwtSubscribeProvider,
-        callable $requestParser,
-        ?callable $responseHandler = null
+        callable $requestParser
     ) {
         $this->jwtSubscribeProvider = $jwtSubscribeProvider;
         $this->requestParser = $requestParser;
-        $this->responseHandler = $responseHandler ?? [$this, 'createJsonResponse'];
     }
 
     public function __invoke(
@@ -37,7 +31,7 @@ class SubscriptionAction
         ?EventDispatcherInterface $dispatcher = null,
         ?string $schemaName = null
     ): Response {
-        return ($this->responseHandler)($request, function (Request $request) use ($schemaName, $realtimeNotifier, $dispatcher): array {
+        return $this->createJsonResponse($request, function (Request $request) use ($schemaName, $realtimeNotifier, $dispatcher): array {
             $payload = ($this->requestParser)($request);
             try {
                 $extra = [];

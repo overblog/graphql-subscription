@@ -18,5 +18,5 @@ services:
     Overblog\GraphQLSubscription\Bridge\Symfony\Action\SubscriptionAction:
         arguments:
             - '@overblog_subscription.jwt_subscribe_provider'
-            - "%overblog_graphql.handle_cors%"
+            - ~
         tags: ['controller.service_arguments']

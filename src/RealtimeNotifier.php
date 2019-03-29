@@ -84,20 +84,10 @@ final class RealtimeNotifier
         return $this->subscribeStorage;
     }
 
-    public function setBus($bus): self
+    public function setBus(?MessageBusInterface $bus): self
     {
-        if ($bus instanceof MessageBusInterface) {
-            $this->bus = $bus;
-            $this->viaBus = true;
-        } elseif (null === $bus) {
-            $this->bus = $bus;
-            $this->viaBus = false;
-        } else {
-            throw new \InvalidArgumentException(\sprintf(
-                'Bus should be null or instance of "Symfony\Component\Messenger\MessageBusInterface" but got %s.',
-                \is_object($bus) ? \get_class($bus) : \gettype($bus)
-            ));
-        }
+        $this->viaBus = null !== $bus;
+        $this->bus = $bus;
 
         return $this;
     }
@@ -118,12 +108,15 @@ final class RealtimeNotifier
         $this->handleData(\unserialize($update->getData()));
     }
 
-    public function processNotificationsSpool(): void
+    public function processNotificationsSpool(bool $catchException = true): void
     {
         foreach ($this->notificationsSpool as $data) {
             try {
                 $this->handleData($data);
             } catch (\Throwable $e) {
+                if (!$catchException) {
+                    throw $e;
+                }
                 $this->logger->critical(
                     'Caught exception or error in %s',
                     [
@@ -157,7 +150,7 @@ final class RealtimeNotifier
             $id = $idGenerator();
             $topic = $this->buildTopicUrl($id, $channel, $schemaName);
 
-            $this->getSubscribeStorage()->store(new Subscriber(
+            $this->getSubscribeStorage()->store($id, new Subscriber(
                 $topic, $payload['query'], $channel, $payload['variables'], $payload['operationName'], $schemaName, $extra
             ));
 
@@ -220,6 +213,7 @@ final class RealtimeNotifier
 
         if (!$event->isPropagationStopped()) {
             $topic = $subscriber->getTopic();
+
             $update = new MercureUpdate(
                 $topic,
                 \json_encode([
@@ -228,14 +222,8 @@ final class RealtimeNotifier
                 ]),
                 [$topic]
             );
-            $this->pushUpdate($update);
+            ($this->publisher)($update);
         }
-    }
-
-    private function pushUpdate(MercureUpdate $update): void
-    {
-        $pusher = $this->publisher;
-        $pusher($update);
     }
 
     private static function parseQuery(string $query): DocumentNode

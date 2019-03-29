@@ -25,12 +25,12 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
     /**
      * {@inheritdoc}
      */
-    public function store(Subscriber $subscriber): bool
+    public function store(string $id, Subscriber $subscriber): bool
     {
         $fileName = \sprintf(
             '%s/%s--%s%s',
             $this->directory,
-            $subscriber->getId(),
+            $id,
             $subscriber->getChannel(),
             $subscriber->getSchemaName() ? '@'.$subscriber->getSchemaName() : '');
         if ($this->write($fileName, $subscriber)) {

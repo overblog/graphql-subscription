@@ -168,14 +168,13 @@ GQL;
         );
     }
 
-    private function getEntryPoint(array $requestPayload, callable $jwtProvider = null, callable $responseHandler = null): SubscriptionAction
+    private function getEntryPoint(array $requestPayload, callable $jwtProvider = null): SubscriptionAction
     {
         return new SubscriptionAction(
             $jwtProvider ?? new JwtSubscribeProvider(self::SECRET_SUBSCRIBER_KEY),
             function () use ($requestPayload) {
                 return $requestPayload;
-            },
-            $responseHandler
+            }
         );
     }
 }

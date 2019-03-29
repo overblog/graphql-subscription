@@ -89,6 +89,34 @@ class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
+                ->arrayNode('graphql_executor')
+                    ->isRequired()
+                    ->addDefaultsIfNotSet()
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(function (string $id): array {
+                            return ['id' => $id];
+                        })
+                    ->end()
+                    ->children()
+                        ->scalarNode('id')->isRequired()->end()
+                        ->scalarNode('method')->defaultNull()->end()
+                    ->end()
+                ->end()
+                ->arrayNode('request_parser')
+                    ->isRequired()
+                    ->addDefaultsIfNotSet()
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(function (string $id): array {
+                            return ['id' => $id];
+                        })
+                    ->end()
+                    ->children()
+                        ->scalarNode('id')->isRequired()->end()
+                        ->scalarNode('method')->defaultNull()->end()
+                    ->end()
+                ->end()
             ->end()
         ->end();
 
