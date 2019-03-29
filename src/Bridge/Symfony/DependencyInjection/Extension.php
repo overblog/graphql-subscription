@@ -94,7 +94,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             // jwt publish and subscribe providers
             $jwtProviderID = \sprintf('%s.jwt_%s_provider', $this->getAlias(), $type);
             if ($default === $options['provider']) {
-                $container->register($jwtProviderID, JwtPublishProvider::class)
+                $container->register($jwtProviderID, $default)
                     ->addArgument($options['secret_key']);
             } else {
                 $container->setAlias($jwtProviderID, $options['provider']);

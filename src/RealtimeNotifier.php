@@ -217,15 +217,13 @@ final class RealtimeNotifier
         );
 
         if (!$event->isPropagationStopped()) {
-            $topic = $subscriber->getTopic();
-
             $update = new MercureUpdate(
-                $topic,
+                $subscriber->getTopic(),
                 \json_encode([
                     'type' => static::SUBSCRIPTION_DATA,
                     'payload' => $result,
                 ]),
-                [$topic]
+                [$subscriber->getTopic()]
             );
             ($this->publisher)($update);
         }
