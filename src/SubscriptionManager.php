@@ -209,10 +209,14 @@ final class SubscriptionManager
             ));
 
             return [
-                'type' => MessageTypes::GQL_START,
-                'topic' => $topic,
-                'token' => ($this->jwtSubscribeProvider)($topic),
+                'type' => MessageTypes::GQL_DATA,
+                'id' => $subscriptionID,
                 'payload' => $result,
+                'extensions' => [
+                    'id' => $id,
+                    'topic' => $topic,
+                    'token' => ($this->jwtSubscribeProvider)($topic),
+                ],
             ];
         } else {
             return [
@@ -273,6 +277,10 @@ final class SubscriptionManager
                 \json_encode([
                     'type' => MessageTypes::GQL_DATA,
                     'payload' => $result,
+                    'extensions' => [
+                        'id' => $subscriber->getId(),
+                        'topic' => $subscriber->getTopic(),
+                    ],
                 ]),
                 [$subscriber->getTopic()]
             );

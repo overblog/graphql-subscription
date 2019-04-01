@@ -25,7 +25,7 @@ class SubscriptionManagerTest extends TestCase
         $executor = $this->createExecutor();
         $publisher = $this->createPublisher([
             'topic' => 'https://graphql.org/subscriptions/myID',
-            'data' => '{"type":"data","payload":{"data":{"inbox":{"message":"hello word!"}}}}',
+            'data' => '{"type":"data","payload":{"data":{"inbox":{"message":"hello word!"}}},"extensions":{"id":"myID","topic":"https:\/\/graphql.org\/subscriptions\/myID"}}',
             'target' => 'https://graphql.org/subscriptions/myID',
         ]);
         $realtimeNotifier = $this->createRealtimeNotifier($publisher, $executor);
