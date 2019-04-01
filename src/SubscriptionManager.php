@@ -17,13 +17,8 @@ use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\Update as MercureUpdate;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-final class RealtimeNotifier
+final class SubscriptionManager
 {
-    public const SUBSCRIPTION_START = 'start';
-    public const SUBSCRIPTION_STOP = 'stop';
-    public const SUBSCRIPTION_DATA = 'data';
-    public const SUBSCRIPTION_ERROR = 'error';
-
     private $publisher;
 
     /** @var MessageBusInterface */
@@ -34,6 +29,8 @@ final class RealtimeNotifier
     private $executor;
 
     private $topicUrlPattern;
+
+    private $jwtSubscribeProvider;
 
     private $viaBus = false;
 
@@ -46,8 +43,9 @@ final class RealtimeNotifier
      *
      * @param Publisher|callable        $publisher
      * @param SubscribeStorageInterface $subscribeStorage
-     * @param callable                  $executor         should return the result payload as an array
+     * @param callable                  $executor             should return the result payload
      * @param string                    $topicUrlPattern
+     * @param callable                  $jwtSubscribeProvider
      * @param LoggerInterface|null      $logger
      */
     public function __construct(
@@ -55,6 +53,7 @@ final class RealtimeNotifier
         SubscribeStorageInterface $subscribeStorage,
         callable $executor,
         string $topicUrlPattern,
+        callable $jwtSubscribeProvider,
         ?LoggerInterface $logger = null
     ) {
         $this->publisher = $publisher;
@@ -62,6 +61,7 @@ final class RealtimeNotifier
         $this->subscribeStorage = $subscribeStorage;
         $this->validateTopicUrlPattern($topicUrlPattern);
         $this->topicUrlPattern = $topicUrlPattern;
+        $this->jwtSubscribeProvider = $jwtSubscribeProvider;
         $this->logger = $logger ?? new NullLogger();
     }
 
@@ -134,12 +134,55 @@ final class RealtimeNotifier
         $this->notificationsSpool = [];
     }
 
-    public function handleStart(
-        array $payload,
-        callable $jwtSubscribeProvider,
+    public function handle(
+        array $data,
         ?string $schemaName = null,
-        array $extra = [],
-        callable $idGenerator = null
+        ?array $extra = null
+    ): ?array {
+        $type = $data['type'] ?? null;
+
+        switch ($type) {
+            case MessageTypes::GQL_CONNECTION_INIT:
+            case MessageTypes::GQL_CONNECTION_TERMINATE:
+                return [
+                    'type' => MessageTypes::GQL_CONNECTION_ACK,
+                    'payload' => [],
+                ];
+
+            case MessageTypes::GQL_START:
+                $payload = [
+                    'query' => null,
+                    'variables' => null,
+                    'operationName' => null,
+                ];
+
+                if (\is_array($data['payload'])) {
+                    $payload = \array_filter($data['payload']) + $payload;
+                }
+
+                return $this->handleStart(
+                    $data['id'] ?? null,
+                    $payload,
+                    $schemaName,
+                    $extra
+                );
+
+            case MessageTypes::GQL_STOP:
+                return null;
+
+            default:
+                throw new \InvalidArgumentException(\sprintf(
+                    'Only "%s" types are handle by "SubscriptionHandler".',
+                    \implode('", ', MessageTypes::CLIENT_MESSAGE_TYPES)
+                ));
+        }
+    }
+
+    private function handleStart(
+        ?string $subscriptionID,
+        ?array $payload,
+        ?string $schemaName = null,
+        array $extra = []
     ): array {
         $result = ($this->executor)($schemaName, $payload);
         if ($result instanceof ExecutionResult) {
@@ -150,24 +193,30 @@ final class RealtimeNotifier
             $document = self::parseQuery($payload['query']);
             $operationDef = self::extractOperationDefinition($document, $payload['operationName']);
             $channel = self::extractSubscriptionChannel($operationDef);
-
-            $idGenerator = $idGenerator ?? [$this, 'generateSubscriberId'];
-            $id = $idGenerator();
+            $id = $this->generateId($subscriptionID);
             $topic = $this->buildTopicUrl($id, $channel, $schemaName);
 
-            $this->getSubscribeStorage()->store($id, new Subscriber(
-                $topic, $payload['query'], $channel, $payload['variables'], $payload['operationName'], $schemaName, $extra
+            $this->getSubscribeStorage()->store(new Subscriber(
+                $id,
+                $subscriptionID,
+                $topic,
+                $payload['query'],
+                $channel,
+                $payload['variables'],
+                $payload['operationName'],
+                $schemaName,
+                $extra
             ));
 
             return [
-                'type' => self::SUBSCRIPTION_START,
+                'type' => MessageTypes::GQL_START,
                 'topic' => $topic,
-                'token' => ($jwtSubscribeProvider)($topic),
+                'token' => ($this->jwtSubscribeProvider)($topic),
                 'payload' => $result,
             ];
         } else {
             return [
-                'type' => self::SUBSCRIPTION_ERROR,
+                'type' => MessageTypes::GQL_ERROR,
                 'payload' => $result,
             ];
         }
@@ -190,9 +239,11 @@ final class RealtimeNotifier
         }
     }
 
-    private function generateSubscriberId(): string
+    private function generateId(?string $subscriptionId): string
     {
-        return \substr(\sha1(\uniqid(\random_int(0, \getrandmax()).'', true)), 0, 12);
+        $sha1 = \sha1(\uniqid(\time().$subscriptionId.\random_int(0, \PHP_INT_MAX), true));
+
+        return \substr($sha1, 0, 12);
     }
 
     private function buildTopicUrl(string $id, string $channel, ?string $schemaName): string
@@ -211,7 +262,7 @@ final class RealtimeNotifier
             [
                 'query' => $subscriber->getQuery(),
                 'variables' => $subscriber->getVariables(),
-                'operationName' => $subscriber->getOperatorName(),
+                'operationName' => $subscriber->getOperationName(),
             ],
             $event = new RootValue($payload, $subscriber)
         );
@@ -220,7 +271,7 @@ final class RealtimeNotifier
             $update = new MercureUpdate(
                 $subscriber->getTopic(),
                 \json_encode([
-                    'type' => static::SUBSCRIPTION_DATA,
+                    'type' => MessageTypes::GQL_DATA,
                     'payload' => $result,
                 ]),
                 [$subscriber->getTopic()]

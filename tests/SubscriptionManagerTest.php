@@ -6,16 +6,16 @@ namespace Overblog\GraphQLSubscription\Tests;
 
 use GraphQL\Executor\ExecutionResult;
 use Overblog\GraphQLSubscription\Entity\Subscriber;
-use Overblog\GraphQLSubscription\RealtimeNotifier;
 use Overblog\GraphQLSubscription\RootValue;
 use Overblog\GraphQLSubscription\Storage\MemorySubscriptionStorage;
+use Overblog\GraphQLSubscription\SubscriptionManager;
 use Overblog\GraphQLSubscription\Update;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBus;
 
-class RealtimeNotifierTest extends TestCase
+class SubscriptionManagerTest extends TestCase
 {
     public const URL = 'https://example.test/hub';
     public const JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.OPker5jU6ePTLigtCI8WbYgOpfNvI-dClddsjsiFXh4';
@@ -65,19 +65,27 @@ class RealtimeNotifierTest extends TestCase
         $realtimeNotifier->notify('inbox', ['inbox' => ['message' => 'Hi!']], 'mySchema');
     }
 
-    private function createRealtimeNotifier(callable $publisher, $executor, ?array $storage = null): RealtimeNotifier
+    private function createRealtimeNotifier(callable $publisher, $executor, ?array $storage = null): SubscriptionManager
     {
         $storage = $storage ?? [
             new Subscriber(
-        'https://graphql.org/subscriptions/myID', 'subscription { inbox { message } }', 'inbox', null, null, null
+                'myID',
+                '1',
+                'https://graphql.org/subscriptions/myID',
+                'subscription { inbox { message } }',
+                'inbox',
+                null,
+                null,
+                null
             ),
         ];
 
-        return new RealtimeNotifier(
+        return new SubscriptionManager(
             $publisher,
             new MemorySubscriptionStorage($storage),
             $executor,
-            'https://graphql.org/subscriptions/{id}'
+            'https://graphql.org/subscriptions/{id}',
+            function (): void {}
         );
     }
 

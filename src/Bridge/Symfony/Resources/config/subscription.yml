@@ -5,22 +5,22 @@ services:
             - ~
             - '@overblog_graphql_subscription.jwt_publish_provider'
 
-    Overblog\GraphQLSubscription\RealtimeNotifier:
+    Overblog\GraphQLSubscription\SubscriptionManager:
         arguments:
             - '@overblog_graphql_subscription.publisher'
             - '@Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface'
             - ~
             - ~
+            - '@overblog_graphql_subscription.jwt_subscribe_provider'
             - '@?logger'
 
     Overblog\GraphQLSubscription\Bridge\Symfony\EventListener\SpoolNotificationsHandler:
         arguments:
-            - '@Overblog\GraphQLSubscription\RealtimeNotifier'
+            - '@Overblog\GraphQLSubscription\SubscriptionManager'
         tags:
             - {name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate}
 
-    Overblog\GraphQLSubscription\Bridge\Symfony\Action\SubscriptionAction:
+    Overblog\GraphQLSubscription\Bridge\Symfony\Action\EndpointAction:
         arguments:
-            - '@overblog_graphql_subscription.jwt_subscribe_provider'
             - ~
         tags: ['controller.service_arguments']

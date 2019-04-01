@@ -104,7 +104,6 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
                 ->arrayNode('request_parser')
-                    ->isRequired()
                     ->addDefaultsIfNotSet()
                     ->beforeNormalization()
                         ->ifString()

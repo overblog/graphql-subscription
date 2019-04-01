@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\DependencyInjection;
 
 use Overblog\GraphQLBundle\Request\Executor;
-use Overblog\GraphQLSubscription\Bridge\Symfony\Action\SubscriptionAction;
+use Overblog\GraphQLSubscription\Bridge\Symfony\Action\EndpointAction;
 use Overblog\GraphQLSubscription\Bridge\Symfony\EventListener\SpoolNotificationsHandler;
 use Overblog\GraphQLSubscription\Provider\JwtPublishProvider;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
-use Overblog\GraphQLSubscription\RealtimeNotifier;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
+use Overblog\GraphQLSubscription\SubscriptionManager;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
@@ -40,7 +40,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
     private function setSpoolNotificationHandlerDefinition(array $config, ContainerBuilder $container): void
     {
         $container->register(SpoolNotificationsHandler::class)
-            ->setArguments([new Reference(RealtimeNotifier::class)])
+            ->setArguments([new Reference(SubscriptionManager::class)])
             ->addTag('kernel.event_listener', ['event' => 'kernel.terminate', 'method' => 'onKernelTerminate']);
     }
 
@@ -51,7 +51,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             $parser = [$parser, $config['request_parser']['method']];
         }
 
-        $container->findDefinition(SubscriptionAction::class)
+        $container->findDefinition(EndpointAction::class)
             ->replaceArgument(1, $parser);
     }
 
@@ -64,7 +64,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             $executor = [$executor, $config['graphql_executor']['method']];
         }
 
-        $realtimeNotifierDefinition = $container->findDefinition(RealtimeNotifier::class)
+        $realtimeNotifierDefinition = $container->findDefinition(SubscriptionManager::class)
             ->replaceArgument(2, $executor)
             ->replaceArgument(3, $config['topic_url_pattern'])
             ->addTag('messenger.message_handler', $attributes);
@@ -127,10 +127,6 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             $container->prependExtensionConfig(
                 Configuration::NAME,
                 [
-                    'request_parser' => [
-                        'id' => 'overblog_graphql.request_parser',
-                        'method' => 'parse',
-                    ],
                     'graphql_executor' => [
                         'id' => Executor::class,
                         'method' => 'execute',

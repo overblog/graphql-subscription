@@ -9,14 +9,13 @@ use Overblog\GraphQLSubscription\Entity\Subscriber;
 interface SubscribeStorageInterface
 {
     /**
-     * @param string     $id
      * @param Subscriber $subscriber
      *
-     * @throws \RuntimeException if could not store subscription
-     *
      * @return bool
+     *
+     * @throws \RuntimeException if could not store subscription
      */
-    public function store(string $id, Subscriber $subscriber): bool;
+    public function store(Subscriber $subscriber): bool;
 
     /**
      * Return an array of subscribers for given channel an schema name.

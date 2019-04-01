@@ -53,13 +53,11 @@ class FilesystemSubscribeStorageTest extends TestCase
     public function testStore(FilesystemSubscribeStorage $storage): FilesystemSubscribeStorage
     {
         $storage->store(
-            'my-unique-id',
             new Subscriber(...\array_values($this->subscriber1Args()))
         );
         $this->assertFileExists(self::$directory.'/my-unique-id--channel@main');
 
         $storage->store(
-            'my-unique-id-2',
             new Subscriber(...\array_values($this->subscriber2Args()))
         );
 
@@ -99,11 +97,13 @@ class FilesystemSubscribeStorageTest extends TestCase
     private static function subscriber1Args(): array
     {
         return [
-            'topic' => 'http://mytopic.org/my-unique-id',
+            'id' => 'my-unique-id',
+            'subscriptionId' => '1',
+            'topic' => 'http://mytopic.org/unique-id-1',
             'query' => 'baz {q}',
             'channel' => 'channel',
             'variables' => ['foo' => 'bar'],
-            'operatorName' => 'baz',
+            'operationName' => 'baz',
             'schemaName' => 'main',
         ];
     }
@@ -111,11 +111,13 @@ class FilesystemSubscribeStorageTest extends TestCase
     private static function subscriber2Args(): array
     {
         return [
-            'topic' => 'http://mytopic.org/my-unique-id-2',
+            'id' => 'my-unique-id-2',
+            'subscriptionId' => '2',
+            'topic' => 'http://mytopic.org/unique-id-2',
             'query' => '{q}',
             'channel' => 'channel2',
             'variables' => null,
-            'operatorName' => null,
+            'operationName' => null,
             'schemaName' => null,
         ];
     }

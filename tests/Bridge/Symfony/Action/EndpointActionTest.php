@@ -6,18 +6,19 @@ namespace Overblog\GraphQLSubscription\Tests\Bridge\Symfony\Action;
 
 use Lcobucci\JWT\Parser;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
-use Overblog\GraphQLSubscription\Bridge\Symfony\Action\SubscriptionAction;
+use Overblog\GraphQLSubscription\Bridge\Symfony\Action\EndpointAction;
 use Overblog\GraphQLSubscription\Bridge\Symfony\Event\SubscriptionExtraEvent;
 use Overblog\GraphQLSubscription\Entity\Subscriber;
+use Overblog\GraphQLSubscription\MessageTypes;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
-use Overblog\GraphQLSubscription\RealtimeNotifier;
 use Overblog\GraphQLSubscription\Storage\MemorySubscriptionStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
+use Overblog\GraphQLSubscription\SubscriptionManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 
-class SubscriptionActionTest extends TestCase
+class EndpointActionTest extends TestCase
 {
     public const SECRET_SUBSCRIBER_KEY = 'verySecretKey';
 
@@ -120,29 +121,35 @@ GQL;
             [],
             [],
             [],
-            $query
+            \json_encode([
+                'id' => 1,
+                'type' => MessageTypes::GQL_START,
+                'payload' => ['query' => $query], ]
+            )
         );
         $request->setMethod('POST');
-        $request->headers->set('Content-Type', 'application/graphql;charset=utf8');
-        $action = $this->getEntryPoint(
-            $expectedRequestParams = [
-                'query' => $query,
-                'variables' => null,
-                'operationName' => null,
-            ]
-        );
+        $request->headers->set('Content-Type', 'application/json;charset=utf8');
+        $action = $this->getEntryPoint();
 
         return [
             $action(
                 $request,
                 $this->getRealtimeNotifier(
                     $storage = new MemorySubscriptionStorage(),
-                    function (?string $schemaName, array $requestParams, $rootValue = null) use ($expectedSchemaName, $expectedPayload, $expectedRequestParams): array {
+                    function (
+                        ?string $schemaName,
+                        array $requestParams,
+                        $rootValue = null
+                    ) use ($expectedSchemaName, $expectedPayload, $query): array {
                         static $previousCall = 0;
                         $this->assertSame(0, $previousCall);
                         $this->assertSame($expectedSchemaName, $schemaName);
                         $this->assertNull($rootValue);
-                        $this->assertSame($expectedRequestParams, $requestParams);
+                        $this->assertSame([
+                            'query' => $query,
+                            'variables' => null,
+                            'operationName' => null,
+                        ], $requestParams);
 
                         ++$previousCall;
 
@@ -156,25 +163,21 @@ GQL;
         ];
     }
 
-    private function getRealtimeNotifier(SubscribeStorageInterface $storage, callable $executor): RealtimeNotifier
+    private function getRealtimeNotifier(SubscribeStorageInterface $storage, callable $executor): SubscriptionManager
     {
-        return new RealtimeNotifier(
+        return new SubscriptionManager(
             function (): void {
                 $this->fail('Publisher should never be execute in create action');
             },
             $storage,
             $executor,
-            'https://graphql.org/subscriptions/{id}'
+            'https://graphql.org/subscriptions/{id}',
+            new JwtSubscribeProvider(self::SECRET_SUBSCRIBER_KEY)
         );
     }
 
-    private function getEntryPoint(array $requestPayload, callable $jwtProvider = null): SubscriptionAction
+    private function getEntryPoint(): EndpointAction
     {
-        return new SubscriptionAction(
-            $jwtProvider ?? new JwtSubscribeProvider(self::SECRET_SUBSCRIBER_KEY),
-            function () use ($requestPayload) {
-                return $requestPayload;
-            }
-        );
+        return new EndpointAction();
     }
 }
