@@ -46,13 +46,15 @@ class Extension extends BaseExtension implements PrependExtensionInterface
 
     private function setSubscriptionActionRequestParser(array $config, ContainerBuilder $container): void
     {
-        $parser = new Reference($config['request_parser']['id']);
-        if (null !== $config['request_parser']['method']) {
-            $parser = [$parser, $config['request_parser']['method']];
-        }
+        if (!empty($config['request_parser']['id'])) {
+            $parser = new Reference($config['request_parser']['id']);
+            if (null !== $config['request_parser']['method']) {
+                $parser = [$parser, $config['request_parser']['method']];
+            }
 
-        $container->findDefinition(EndpointAction::class)
-            ->replaceArgument(1, $parser);
+            $container->findDefinition(EndpointAction::class)
+                ->replaceArgument(1, $parser);
+        }
     }
 
     private function setRealtimeNotifierDefinitionArgs(array $config, ContainerBuilder $container): void
