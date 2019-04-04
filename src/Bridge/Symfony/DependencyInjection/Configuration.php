@@ -84,7 +84,7 @@ class Configuration implements ConfigurationInterface
                             ->info('The service id to handler subscription persistence.')
                         ->end()
                         ->scalarNode('path')
-                            ->defaultValue($this->varDir.'/overblog-graphql-subscriptions')
+                            ->defaultValue($this->varDir.'/graphql-subscriptions')
                             ->info('The path where to stock files is useful only id using default filesystem subscription storage.')
                         ->end()
                     ->end()

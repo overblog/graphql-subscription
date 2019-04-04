@@ -23,7 +23,7 @@ final class JsonParser
             }
 
             $type = $input['type'] ?? null;
-            $id = $input['id'] ? (string) $input['id'] : null;
+            $id = isset($input['id']) ? (string) $input['id'] : null;
             $payload = $input['payload'] ?? null;
 
             return [$type, $id, $payload];
