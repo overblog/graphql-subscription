@@ -12,8 +12,10 @@ use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use Overblog\GraphQLSubscription\SubscriptionManager;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
@@ -33,11 +35,11 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         $this->setMercureHubDefinitionArgs($config, $container);
         $this->setJwtProvidersDefinitions($config, $container);
         $this->setStorageDefinitions($config, $container);
-        $this->setRealtimeNotifierDefinitionArgs($config, $container);
+        $this->setSubscriptionManagerDefinitionArgs($config, $container);
         $this->setSubscriptionActionRequestParser($config, $container);
     }
 
-    private function setSpoolNotificationHandlerDefinition(array $config, ContainerBuilder $container): void
+    private function setSpoolNotificationHandlerDefinition(ContainerBuilder $container): void
     {
         $container->register(SpoolNotificationsHandler::class)
             ->setArguments([new Reference(SubscriptionManager::class)])
@@ -57,7 +59,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         }
     }
 
-    private function setRealtimeNotifierDefinitionArgs(array $config, ContainerBuilder $container): void
+    private function setSubscriptionManagerDefinitionArgs(array $config, ContainerBuilder $container): void
     {
         $bus = $config['bus'] ?? null;
         $attributes = null === $bus ? [] : ['bus' => $bus];
@@ -66,15 +68,17 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             $executor = [$executor, $config['graphql_executor']['method']];
         }
 
-        $realtimeNotifierDefinition = $container->findDefinition(SubscriptionManager::class)
+        $container->findDefinition(SubscriptionManager::class)
             ->replaceArgument(2, $executor)
             ->replaceArgument(3, $config['topic_url_pattern'])
+            ->addMethodCall(
+                'setBus',
+                [new Reference($bus ?? MessageBusInterface::class, ContainerInterface::NULL_ON_INVALID_REFERENCE)]
+            )
             ->addTag('messenger.message_handler', $attributes);
-        if (\class_exists('Symfony\\Component\\Messenger\\MessageBusInterface')) {
-            $realtimeNotifierDefinition
-                ->addMethodCall('setBus', [new Reference($bus ?? MessageBusInterface::class)]);
-        } else {
-            $this->setSpoolNotificationHandlerDefinition($config, $container);
+
+        if (!\class_exists('Symfony\\Component\\Messenger\\MessageBus')) {
+            $this->setSpoolNotificationHandlerDefinition($container);
         }
     }
 
@@ -96,6 +100,14 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             // jwt publish and subscribe providers
             $jwtProviderID = \sprintf('%s.jwt_%s_provider', $this->getAlias(), $type);
             if ($default === $options['provider']) {
+                if (empty($options['secret_key'])) {
+                    throw new InvalidConfigurationException(\sprintf(
+                        '"mercure_hub.%s.secret_key" is required when using with default provider %s.',
+                        $type,
+                        $default
+                    ));
+                }
+
                 $container->register($jwtProviderID, $default)
                     ->addArgument($options['secret_key']);
             } else {

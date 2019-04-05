@@ -30,48 +30,11 @@ class Configuration implements ConfigurationInterface
         $rootNode
             ->addDefaultsIfNotSet()
             ->children()
-                ->arrayNode('mercure_hub')
-                    ->isRequired()
-                    ->addDefaultsIfNotSet()
-                    ->normalizeKeys(false)
-                    ->children()
-                        ->scalarNode('url')
-                            ->isRequired()
-                            ->info('URL of mercure hub endpoint.')
-                            ->example('https://demo.mercure.rocks/hub')
-                        ->end()
-                        ->arrayNode('publish')
-                            ->addDefaultsIfNotSet()
-                            ->children()
-                                ->scalarNode('provider')
-                                    ->defaultValue(JwtPublishProvider::class)
-                                    ->info('The ID of a service to call to generate the publisher JSON Web Token.')
-                                ->end()
-                                ->scalarNode('secret_key')->info('The JWT secret key to use to publish to this hub.')->end()
-                            ->end()
-                        ->end()
-                        ->arrayNode('subscribe')
-                            ->addDefaultsIfNotSet()
-                            ->children()
-                                ->scalarNode('provider')
-                                    ->defaultValue(JwtSubscribeProvider::class)
-                                    ->info('The ID of a service to call to generate the subscriber JSON Web Token.')
-                                ->end()
-                                ->scalarNode('secret_key')->info('The JWT secret key to use for subscribe.')->end()
-                            ->end()
-                        ->end()
-                    ->end()
-                ->end()
+                ->append($this->mercureHubNode('mercure_hub'))
                 ->scalarNode('topic_url_pattern')
                     ->isRequired()
                     ->info('the url pattern to build topic, it should contain the "{id}" replacement string, optional placeholders "{channel}" and "{schemaName}" can also be used.')
                     ->example('https://example.com/subscriptions/{id} or https://{schemaName}.example.com/{channel}/{id}.json')
-                    ->validate()
-                        ->ifTrue(function (?string $topicUrlPattern): bool {
-                            return false === \filter_var($topicUrlPattern, FILTER_VALIDATE_URL) || false === \strpos($topicUrlPattern, '{id}');
-                        })
-                        ->thenInvalid('Topic url pattern should be a valid url and should contain the "{id}" replacement string but got %s.')
-                    ->end()
                 ->end()
                 ->scalarNode('bus')
                     ->info('Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.')
@@ -89,37 +52,78 @@ class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
-                ->arrayNode('graphql_executor')
+                ->append($this->callableServiceNode('graphql_executor'))
+                ->append($this->callableServiceNode('request_parser', false))
+            ->end()
+        ->end();
+
+        return $treeBuilder;
+    }
+
+    private function mercureHubNode(string $name): ArrayNodeDefinition
+    {
+        $builder = new TreeBuilder($name);
+        /** @var ArrayNodeDefinition $node */
+        $node = self::getRootNodeWithoutDeprecation($builder, $name);
+        $node
+            ->isRequired()
+            ->addDefaultsIfNotSet()
+            ->normalizeKeys(false)
+            ->children()
+                ->scalarNode('url')
                     ->isRequired()
+                    ->info('URL of mercure hub endpoint.')
+                    ->example('https://demo.mercure.rocks/hub')
+                ->end()
+                ->arrayNode('publish')
                     ->addDefaultsIfNotSet()
-                    ->beforeNormalization()
-                        ->ifString()
-                        ->then(function (string $id): array {
-                            return ['id' => $id];
-                        })
-                    ->end()
                     ->children()
-                        ->scalarNode('id')->isRequired()->end()
-                        ->scalarNode('method')->defaultNull()->end()
+                        ->scalarNode('provider')
+                            ->defaultValue(JwtPublishProvider::class)
+                            ->info('The ID of a service to call to generate the publisher JSON Web Token.')
+                        ->end()
+                        ->scalarNode('secret_key')->info('The JWT secret key to use to publish to this hub.')->end()
                     ->end()
                 ->end()
-                ->arrayNode('request_parser')
+                ->arrayNode('subscribe')
                     ->addDefaultsIfNotSet()
-                    ->beforeNormalization()
-                        ->ifString()
-                        ->then(function (string $id): array {
-                            return ['id' => $id];
-                        })
-                    ->end()
                     ->children()
-                        ->scalarNode('id')->isRequired()->end()
-                        ->scalarNode('method')->defaultNull()->end()
+                        ->scalarNode('provider')
+                            ->defaultValue(JwtSubscribeProvider::class)
+                            ->info('The ID of a service to call to generate the subscriber JSON Web Token.')
+                        ->end()
+                        ->scalarNode('secret_key')->info('The JWT secret key to use for subscribe.')->end()
                     ->end()
                 ->end()
             ->end()
         ->end();
 
-        return $treeBuilder;
+        return $node;
+    }
+
+    private function callableServiceNode(string $name, bool $isRequired = true): ArrayNodeDefinition
+    {
+        $builder = new TreeBuilder($name);
+        /** @var ArrayNodeDefinition $node */
+        $node = self::getRootNodeWithoutDeprecation($builder, $name);
+        if ($isRequired) {
+            $node->isRequired();
+        }
+        $node
+            ->addDefaultsIfNotSet()
+            ->beforeNormalization()
+                ->ifString()
+                ->then(function (string $id): array {
+                    return ['id' => $id];
+                })
+            ->end()
+            ->children()
+                ->scalarNode('id')->isRequired()->end()
+                ->scalarNode('method')->defaultNull()->end()
+            ->end()
+        ->end();
+
+        return $node;
     }
 
     /**
