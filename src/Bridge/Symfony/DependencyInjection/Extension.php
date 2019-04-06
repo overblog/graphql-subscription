@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\DependencyInjection;
 
-use Overblog\GraphQLBundle\Request\Executor;
 use Overblog\GraphQLSubscription\Bridge\Symfony\Action\EndpointAction;
-use Overblog\GraphQLSubscription\Bridge\Symfony\EventListener\SpoolNotificationsHandler;
 use Overblog\GraphQLSubscription\Provider\JwtPublishProvider;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
@@ -20,7 +18,6 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension as BaseExtension;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 class Extension extends BaseExtension implements PrependExtensionInterface
 {
@@ -37,13 +34,6 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         $this->setStorageDefinitions($config, $container);
         $this->setSubscriptionManagerDefinitionArgs($config, $container);
         $this->setSubscriptionActionRequestParser($config, $container);
-    }
-
-    private function setSpoolNotificationHandlerDefinition(ContainerBuilder $container): void
-    {
-        $container->register(SpoolNotificationsHandler::class)
-            ->setArguments([new Reference(SubscriptionManager::class)])
-            ->addTag('kernel.event_listener', ['event' => 'kernel.terminate', 'method' => 'onKernelTerminate']);
     }
 
     private function setSubscriptionActionRequestParser(array $config, ContainerBuilder $container): void
@@ -73,13 +63,9 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             ->replaceArgument(3, $config['topic_url_pattern'])
             ->addMethodCall(
                 'setBus',
-                [new Reference($bus ?? MessageBusInterface::class, ContainerInterface::NULL_ON_INVALID_REFERENCE)]
+                [new Reference($bus ?? 'Symfony\\Component\\Messenger\\MessageBusInterface', ContainerInterface::NULL_ON_INVALID_REFERENCE)]
             )
             ->addTag('messenger.message_handler', $attributes);
-
-        if (!\class_exists('Symfony\\Component\\Messenger\\MessageBus')) {
-            $this->setSpoolNotificationHandlerDefinition($container);
-        }
     }
 
     private function setStorageDefinitions(array $config, ContainerBuilder $container): void
@@ -100,7 +86,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             // jwt publish and subscribe providers
             $jwtProviderID = \sprintf('%s.jwt_%s_provider', $this->getAlias(), $type);
             if ($default === $options['provider']) {
-                if (empty($options['secret_key'])) {
+                if (!isset($options['secret_key'])) {
                     throw new InvalidConfigurationException(\sprintf(
                         '"mercure_hub.%s.secret_key" is required when using with default provider %s.',
                         $type,
@@ -142,7 +128,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
                 Configuration::NAME,
                 [
                     'graphql_executor' => [
-                        'id' => Executor::class,
+                        'id' => 'Overblog\\GraphQLBundle\\Request\\Executor',
                         'method' => 'execute',
                     ],
                 ]
