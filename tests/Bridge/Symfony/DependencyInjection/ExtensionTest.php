@@ -24,14 +24,25 @@ class ExtensionTest extends TestCase
     public function testMinimalConfig(): void
     {
         $container = $this->load();
-        $this->assertDefinitionExists($container, 'overblog_graphql_subscription.jwt_publish_provider', JwtPublishProvider::class);
-        $this->assertDefinitionExists($container, 'overblog_graphql_subscription.jwt_subscribe_provider', JwtSubscribeProvider::class);
-        $this->assertDefinitionExists($container, 'overblog_graphql_subscription.publisher');
-        $this->assertDefinitionExists($container, SubscribeStorageInterface::class, FilesystemSubscribeStorage::class);
+        $this->assertDefinition($container, 'overblog_graphql_subscription.jwt_publish_provider', JwtPublishProvider::class);
+        $this->assertDefinition($container, 'overblog_graphql_subscription.jwt_subscribe_provider', JwtSubscribeProvider::class);
+        $this->assertDefinition($container, 'overblog_graphql_subscription.publisher');
+        $this->assertDefinition($container, SubscribeStorageInterface::class, FilesystemSubscribeStorage::class);
         $this->assertSame(self::PROJECT_DIR.'/var/graphql-subscriptions', $container->getDefinition(SubscribeStorageInterface::class)->getArgument(0));
-        $this->assertDefinitionExists($container, SubscriptionManager::class);
-        $this->assertDefinitionExists($container, SpoolNotificationsHandler::class);
-        $this->assertSame(['messenger.message_handler' => [[]]], $container->getDefinition(SubscriptionManager::class)->getTags());
+        $this->assertDefinition($container, SubscriptionManager::class, null, ['messenger.message_handler' => [[]]]);
+        $this->assertDefinition(
+            $container,
+            SpoolNotificationsHandler::class,
+            null,
+            [
+                'kernel.event_listener' => [
+                    [
+                        'event' => 'kernel.terminate',
+                        'method' => 'onKernelTerminate',
+                    ],
+                ],
+            ]
+        );
     }
 
     public function testGraphQLExecutor(): void
@@ -39,7 +50,7 @@ class ExtensionTest extends TestCase
         $config = $this->getMinimalConfiguration();
         $config[] = ['graphql_executor' => 'graphql_executor_handler::execute'];
         $container = $this->load($config);
-        $this->assertDefinitionExists($container, SubscriptionManager::class);
+        $this->assertDefinition($container, SubscriptionManager::class);
         $executor = $container->getDefinition(SubscriptionManager::class)->getArgument(2);
         $this->assertInstanceOf(Reference::class, $executor[0]);
         $this->assertSame('graphql_executor_handler', (string) $executor[0]);
@@ -198,11 +209,14 @@ class ExtensionTest extends TestCase
         return $container;
     }
 
-    private function assertDefinitionExists(ContainerBuilder $container, string $serviceID, ?string $expectedClass = null): void
+    private function assertDefinition(ContainerBuilder $container, string $serviceID, ?string $expectedClass = null, ?array $expectedTags = null): void
     {
         $this->assertTrue($container->hasDefinition($serviceID));
         if ($expectedClass) {
             $this->assertDefinitionClass($container, $serviceID, $expectedClass);
+        }
+        if (null !== $expectedTags) {
+            $this->assertSame($expectedTags, $container->getDefinition($serviceID)->getTags());
         }
     }
 

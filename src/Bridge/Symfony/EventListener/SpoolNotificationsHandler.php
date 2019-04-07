@@ -8,15 +8,15 @@ use Overblog\GraphQLSubscription\SubscriptionManager;
 
 final class SpoolNotificationsHandler
 {
-    private $realtimeNotifier;
+    private $subscriptionManager;
 
-    public function __construct(SubscriptionManager $realtimeNotifier)
+    public function __construct(SubscriptionManager $subscriptionManager)
     {
-        $this->realtimeNotifier = $realtimeNotifier;
+        $this->subscriptionManager = $subscriptionManager;
     }
 
     public function onKernelTerminate(): void
     {
-        $this->realtimeNotifier->processNotificationsSpool();
+        $this->subscriptionManager->processNotificationsSpool();
     }
 }

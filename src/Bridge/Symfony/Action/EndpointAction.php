@@ -25,11 +25,11 @@ class EndpointAction
 
     public function __invoke(
         Request $request,
-        SubscriptionManager $realtimeNotifier,
+        SubscriptionManager $subscriptionManager,
         ?EventDispatcherInterface $dispatcher = null,
         ?string $schemaName = null
     ): Response {
-        return $this->createJsonResponse($request, function (Request $request) use ($schemaName, $realtimeNotifier, $dispatcher): array {
+        return $this->createJsonResponse($request, function (Request $request) use ($schemaName, $subscriptionManager, $dispatcher): array {
             [$type, $id, $payload] = ($this->requestParser)($request);
             try {
                 $extra = [];
@@ -39,7 +39,7 @@ class EndpointAction
                     $extra = $extra->getArrayCopy();
                 }
 
-                return $realtimeNotifier->handle(
+                return $subscriptionManager->handle(
                     \compact('type', 'id', 'payload'),
                     $schemaName,
                     $extra

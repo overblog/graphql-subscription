@@ -135,7 +135,7 @@ GQL;
         return [
             $action(
                 $request,
-                $this->getRealtimeNotifier(
+                $this->getSubscriptionManager(
                     $storage = new MemorySubscriptionStorage(),
                     function (
                         ?string $schemaName,
@@ -164,7 +164,7 @@ GQL;
         ];
     }
 
-    private function getRealtimeNotifier(SubscribeStorageInterface $storage, callable $executor): SubscriptionManager
+    private function getSubscriptionManager(SubscribeStorageInterface $storage, callable $executor): SubscriptionManager
     {
         return new SubscriptionManager(
             function (): void {

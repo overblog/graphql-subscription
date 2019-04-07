@@ -17,7 +17,10 @@ use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\Update as MercureUpdate;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-final class SubscriptionManager
+/**
+ * @final
+ */
+class SubscriptionManager
 {
     private $publisher;
 
@@ -39,8 +42,6 @@ final class SubscriptionManager
     private $logger;
 
     /**
-     * RealtimeNotifier constructor.
-     *
      * @param Publisher|callable        $publisher
      * @param SubscribeStorageInterface $subscribeStorage
      * @param callable                  $executor             should return the result payload
