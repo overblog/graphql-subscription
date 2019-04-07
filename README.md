@@ -43,29 +43,37 @@ Symfony Flex generates:
     overblog_graphql_subscription:
         topic_url_pattern: "http://localhost:8000/subscriptions/{channel}/{id}.json"
         mercure_hub:
-            url: "http://mercure/hub"
-            publish:
-                secret_key: "!mySuperPublisherSecretKey!"
+    #       Will use the mercure bundle default publisher
+            handler_id: ~
+    #       Uncomment to use without mercure bundle
+    #        url: "https://mercure.roks/hub"
+    #        publish:
+    #            secret_key: "!mySuperPublisherSecretKey!"
             subscribe:
                 secret_key: "!mySuperSubscriberSecretKey!"
-    #    Uncomment to modifiy storage filesystem default path
+    #    Uncomment to modify storage filesystem default path
     #    storage:
     #        path: "%kernel.project_dir%/var/graphql-subscriber"
+    #   The graphql query handler
+    #   for OverblogGraphQLBundle: "Overblog\\GraphQLBundle\\Request\\Executor::execute"
+    #   for API-Plateform: "api_platform.graphql.executor::executeQuery"
+        graphql_executor: ~
     ```
+
 * default routes in `config/routes/graphql_subscription.yaml`
 
-```yaml
-overblog_graphql_subscription_endpoint:
-    resource: "@OverblogGraphQLSubscriptionBundle/Resources/config/routing/single.yaml"
-    prefix: /subscriptions
-#   Only for Symfony >= 4.2
-#    trailing_slash_on_root: false
+    ```yaml
+    overblog_graphql_subscription_endpoint:
+        resource: "@OverblogGraphQLSubscriptionBundle/Resources/config/routing/single.yaml"
+        prefix: /subscriptions
+    #   Only for Symfony >= 4.2
+    #    trailing_slash_on_root: false
 
-# Uncomment to enabled multiple schema
-#overblog_graphql_subscription_multiple_endpoint:
-#  resource: "@OverblogGraphQLSubscriptionBundle/Resources/config/routing/multiple.yaml"
-#  prefix: /subscriptions
-```
+    # Uncomment to enabled multiple schema
+    #overblog_graphql_subscription_multiple_endpoint:
+    #  resource: "@OverblogGraphQLSubscriptionBundle/Resources/config/routing/multiple.yaml"
+    #  prefix: /subscriptions
+    ```
 
 ### Handling CORS preflight headers
 

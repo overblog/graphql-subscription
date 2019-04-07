@@ -152,22 +152,12 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         if ($container->hasExtension('overblog_graphql')) {
             $container->prependExtensionConfig(
                 Configuration::NAME,
-                [
-                    'graphql_executor' => [
-                        'id' => 'Overblog\\GraphQLBundle\\Request\\Executor',
-                        'method' => 'execute',
-                    ],
-                ]
+                ['graphql_executor' => 'Overblog\\GraphQLBundle\\Request\\Executor::execute']
             );
         } elseif ($container->hasExtension('api_platform')) {
             $container->prependExtensionConfig(
                 Configuration::NAME,
-                [
-                    'graphql_executor' => [
-                        'id' => 'api_platform.graphql.executor',
-                        'method' => 'executeQuery',
-                    ],
-                ]
+                ['graphql_executor' => 'api_platform.graphql.executor::executeQuery']
             );
         }
     }

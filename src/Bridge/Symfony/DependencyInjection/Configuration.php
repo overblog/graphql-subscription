@@ -117,8 +117,10 @@ class Configuration implements ConfigurationInterface
             ->addDefaultsIfNotSet()
             ->beforeNormalization()
                 ->ifString()
-                ->then(function (string $id): array {
-                    return ['id' => $id];
+                ->then(function (string $callableString): array {
+                    $callable = \explode('::', $callableString, 2);
+
+                    return ['id' => $callable[0], 'method' => $callable[1] ?? null];
                 })
             ->end()
             ->children()
