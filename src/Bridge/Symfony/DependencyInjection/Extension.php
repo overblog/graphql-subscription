@@ -18,6 +18,7 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension as BaseExtension;
+use Symfony\Component\Mercure\Publisher;
 
 class Extension extends BaseExtension implements PrependExtensionInterface
 {
@@ -29,7 +30,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('subscription.yml');
 
-        $this->setMercureHubDefinitionArgs($config, $container);
+        $this->setMercureHubDefinition($config, $container);
         $this->setJwtProvidersDefinitions($config, $container);
         $this->setStorageDefinitions($config, $container);
         $this->setSubscriptionManagerDefinitionArgs($config, $container);
@@ -54,7 +55,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             ->replaceArgument(3, $config['topic_url_pattern'])
             ->addMethodCall(
                 'setBus',
-                [new Reference($bus ?? 'Symfony\\Component\\Messenger\\MessageBusInterface', ContainerInterface::NULL_ON_INVALID_REFERENCE)]
+                [new Reference($bus ?? 'message_bus', ContainerInterface::IGNORE_ON_INVALID_REFERENCE)]
             )
             ->addTag('messenger.message_handler', $attributes);
     }
@@ -93,13 +94,20 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         }
     }
 
-    private function setMercureHubDefinitionArgs(array $config, ContainerBuilder $container): void
+    private function setMercureHubDefinition(array $config, ContainerBuilder $container): void
     {
-        $definition = $container->findDefinition(\sprintf('%s.publisher', $this->getAlias()))
-            ->replaceArgument(0, $config['mercure_hub']['url']);
-        if (!empty($config['http_client']['id'])) {
-            $definition
-                ->replaceArgument(2, $this->resolveCallableServiceReference($config['http_client']));
+        $serviceId = \sprintf('%s.publisher', $this->getAlias());
+
+        if (isset($config['mercure_hub']['handler_id'])) {
+            $container->setAlias($serviceId, $config['mercure_hub']['handler_id']);
+        } else {
+            $definition = $container->register($serviceId, Publisher::class)
+                ->setArgument(0, $config['mercure_hub']['url'])
+                ->setArgument(1, new Reference('overblog_graphql_subscription.jwt_publish_provider'));
+            if (!empty($config['http_client']['id'])) {
+                $definition
+                    ->setArgument(2, $this->resolveCallableServiceReference($config['http_client']));
+            }
         }
     }
 
@@ -128,6 +136,19 @@ class Extension extends BaseExtension implements PrependExtensionInterface
      */
     public function prepend(ContainerBuilder $container): void
     {
+        if ($container->hasExtension('mercure')) {
+            $container->prependExtensionConfig(
+                Configuration::NAME,
+                [
+                    'mercure_hub' => [
+                        'publisher' => [
+                            'handler_id' => 'mercure.hub.default.publisher',
+                        ],
+                    ],
+                ]
+            );
+        }
+
         if ($container->hasExtension('overblog_graphql')) {
             $container->prependExtensionConfig(
                 Configuration::NAME,
@@ -135,6 +156,16 @@ class Extension extends BaseExtension implements PrependExtensionInterface
                     'graphql_executor' => [
                         'id' => 'Overblog\\GraphQLBundle\\Request\\Executor',
                         'method' => 'execute',
+                    ],
+                ]
+            );
+        } elseif ($container->hasExtension('api_platform')) {
+            $container->prependExtensionConfig(
+                Configuration::NAME,
+                [
+                    'graphql_executor' => [
+                        'id' => 'api_platform.graphql.executor',
+                        'method' => 'executeQuery',
                     ],
                 ]
             );

@@ -9,6 +9,7 @@ use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\Publisher as MercurePublisher;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -22,6 +23,9 @@ class Builder
 
     /** @var callable */
     private $executorHandler;
+
+    /** @var Publisher|null */
+    private $publisher;
 
     /** @var callable|null */
     private $publisherHttpClient = null;
@@ -82,6 +86,18 @@ class Builder
     public function setExecutorHandler(callable $executorHandler): self
     {
         $this->executorHandler = $executorHandler;
+
+        return $this;
+    }
+
+    /**
+     * @param Publisher|null $publisher
+     *
+     * @return self
+     */
+    public function setPublisher(?Publisher $publisher): self
+    {
+        $this->publisher = $publisher;
 
         return $this;
     }
@@ -196,11 +212,14 @@ class Builder
 
     public function getSubscriptionManager(): SubscriptionManager
     {
-        $publisher = new MercurePublisher(
-            $this->hubUrl,
-            $this->publisherProvider ?? new JwtPublishProvider($this->publisherSecretKey),
-            $this->publisherHttpClient
-        );
+        $publisher = $this->publisher;
+        if (null === $publisher) {
+            $publisher = new MercurePublisher(
+                $this->hubUrl,
+                $this->publisherProvider ?? new JwtPublishProvider($this->publisherSecretKey),
+                $this->publisherHttpClient
+            );
+        }
         $subscribeStorage = $this->subscribeStorage ?? new FilesystemSubscribeStorage(
             $this->subscribeStoragePath ?? \sys_get_temp_dir().'/graphql-subscriptions'
             );
