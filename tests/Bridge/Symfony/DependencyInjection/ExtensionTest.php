@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
+use Symfony\Component\DependencyInjection\Reference;
 
 class ExtensionTest extends TestCase
 {
@@ -31,6 +32,27 @@ class ExtensionTest extends TestCase
         $this->assertDefinitionExists($container, SubscriptionManager::class);
         $this->assertDefinitionExists($container, SpoolNotificationsHandler::class);
         $this->assertSame(['messenger.message_handler' => [[]]], $container->getDefinition(SubscriptionManager::class)->getTags());
+    }
+
+    public function testGraphQLExecutor(): void
+    {
+        $config = $this->getMinimalConfiguration();
+        $config[] = ['graphql_executor' => 'graphql_executor_handler::execute'];
+        $container = $this->load($config);
+        $this->assertDefinitionExists($container, SubscriptionManager::class);
+        $executor = $container->getDefinition(SubscriptionManager::class)->getArgument(2);
+        $this->assertInstanceOf(Reference::class, $executor[0]);
+        $this->assertSame('graphql_executor_handler', (string) $executor[0]);
+        $this->assertSame('execute', $executor[1]);
+    }
+
+    public function testCustomPublisher(): void
+    {
+        $config = $this->getMinimalConfiguration();
+        $config[] = ['mercure_hub' => ['handler_id' => 'custom_publisher']];
+        $container = $this->load($config);
+        $this->assertTrue($container->hasAlias('overblog_graphql_subscription.publisher'));
+        $this->assertSame('custom_publisher', (string) $container->getAlias('overblog_graphql_subscription.publisher'));
     }
 
     public function testBus(): void
@@ -85,24 +107,77 @@ class ExtensionTest extends TestCase
         $this->assertSame('CustomStorage', (string) $container->getAlias(SubscribeStorageInterface::class));
     }
 
-    public function testPrepend(): void
+    public function testPrependGraphQLBundleAndMercureBundleEnabled(): void
     {
         $extension = new Extension();
         $this->assertInstanceOf(PrependExtensionInterface::class, $extension);
         $container = $this->getMockBuilder(ContainerBuilder::class)
             ->setMethods(['hasExtension', 'prependExtensionConfig'])
             ->getMock();
-        $container->expects($this->once())
+        $container->expects($this->at(0))
+            ->method('hasExtension')
+            ->with('mercure')
+            ->willReturn(true);
+
+        $container->expects($this->at(1))
+            ->method('prependExtensionConfig')
+            ->with('overblog_graphql_subscription', [
+                'mercure_hub' => [
+                    'publisher' => [
+                        'handler_id' => 'mercure.hub.default.publisher',
+                    ],
+                ],
+            ]);
+
+        $container->expects($this->at(2))
             ->method('hasExtension')
             ->with('overblog_graphql')
             ->willReturn(true);
-        $container->expects($this->once())
+
+        $container->expects($this->at(3))
             ->method('prependExtensionConfig')
             ->with('overblog_graphql_subscription', [
-                'graphql_executor' => [
-                    'id' => 'Overblog\\GraphQLBundle\\Request\\Executor',
-                    'method' => 'execute',
+                'graphql_executor' => 'Overblog\\GraphQLBundle\\Request\\Executor::execute',
+            ]);
+        $extension->prepend($container);
+    }
+
+    public function testPrependGraphQLBundleApiPlatformAndMercureBundleEnabled(): void
+    {
+        $extension = new Extension();
+        $this->assertInstanceOf(PrependExtensionInterface::class, $extension);
+        $container = $this->getMockBuilder(ContainerBuilder::class)
+            ->setMethods(['hasExtension', 'prependExtensionConfig'])
+            ->getMock();
+        $container->expects($this->at(0))
+            ->method('hasExtension')
+            ->with('mercure')
+            ->willReturn(true);
+
+        $container->expects($this->at(1))
+            ->method('prependExtensionConfig')
+            ->with('overblog_graphql_subscription', [
+                'mercure_hub' => [
+                    'publisher' => [
+                        'handler_id' => 'mercure.hub.default.publisher',
+                    ],
                 ],
+            ]);
+
+        $container->expects($this->at(2))
+            ->method('hasExtension')
+            ->with('overblog_graphql')
+            ->willReturn(false);
+
+        $container->expects($this->at(3))
+            ->method('hasExtension')
+            ->with('api_platform')
+            ->willReturn(true);
+
+        $container->expects($this->at(4))
+            ->method('prependExtensionConfig')
+            ->with('overblog_graphql_subscription', [
+                'graphql_executor' => 'api_platform.graphql.executor::executeQuery',
             ]);
         $extension->prepend($container);
     }
@@ -154,7 +229,7 @@ class ExtensionTest extends TestCase
                     'subscribe' => ['secret_key' => 'mySecretSubKey'],
                 ],
                 'topic_url_pattern' => 'https://example.com/subscriptions/{id}',
-                'graphql_executor' => ['id' => 'graphql_executor_handler'],
+                'graphql_executor' => 'graphql_executor_handler',
             ],
         ];
     }

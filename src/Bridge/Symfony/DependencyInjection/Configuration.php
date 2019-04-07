@@ -71,6 +71,7 @@ class Configuration implements ConfigurationInterface
             ->normalizeKeys(false)
             ->children()
                 ->scalarNode('handler_id')
+                    ->defaultNull()
                     ->info('Mercure handler service id.')
                     ->example('mercure.hub.default.publisher')
                 ->end()

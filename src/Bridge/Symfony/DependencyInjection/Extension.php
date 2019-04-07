@@ -39,10 +39,8 @@ class Extension extends BaseExtension implements PrependExtensionInterface
 
     private function setSubscriptionActionRequestParser(array $config, ContainerBuilder $container): void
     {
-        if (!empty($config['request_parser']['id'])) {
-            $container->findDefinition(EndpointAction::class)
-                ->replaceArgument(1, $this->resolveCallableServiceReference($config['request_parser']));
-        }
+        $container->findDefinition(EndpointAction::class)
+            ->replaceArgument(0, $this->resolveCallableServiceReference($config['request_parser']));
     }
 
     private function setSubscriptionManagerDefinitionArgs(array $config, ContainerBuilder $container): void
@@ -98,24 +96,26 @@ class Extension extends BaseExtension implements PrependExtensionInterface
     {
         $serviceId = \sprintf('%s.publisher', $this->getAlias());
 
-        if (isset($config['mercure_hub']['handler_id'])) {
+        if (null !== $config['mercure_hub']['handler_id']) {
             $container->setAlias($serviceId, $config['mercure_hub']['handler_id']);
         } else {
-            $definition = $container->register($serviceId, Publisher::class)
-                ->setArgument(0, $config['mercure_hub']['url'])
-                ->setArgument(1, new Reference('overblog_graphql_subscription.jwt_publish_provider'));
-            if (!empty($config['http_client']['id'])) {
-                $definition
-                    ->setArgument(2, $this->resolveCallableServiceReference($config['http_client']));
-            }
+            $container->register($serviceId, Publisher::class)
+                ->setArguments([
+                    $config['mercure_hub']['url'],
+                    new Reference('overblog_graphql_subscription.jwt_publish_provider'),
+                    $this->resolveCallableServiceReference($config['mercure_hub']['http_client']),
+                ]);
         }
     }
 
     private function resolveCallableServiceReference(array $callableServiceParams)
     {
-        $callableServiceRef = new Reference($callableServiceParams['id']);
-        if (null !== $callableServiceParams['method']) {
-            $callableServiceRef = [$callableServiceRef, $callableServiceParams['method']];
+        $callableServiceRef = null;
+        if (isset($callableServiceParams['id'])) {
+            $callableServiceRef = new Reference($callableServiceParams['id']);
+            if (null !== $callableServiceParams['method']) {
+                $callableServiceRef = [$callableServiceRef, $callableServiceParams['method']];
+            }
         }
 
         return $callableServiceRef;
@@ -141,9 +141,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
                 Configuration::NAME,
                 [
                     'mercure_hub' => [
-                        'publisher' => [
-                            'handler_id' => 'mercure.hub.default.publisher',
-                        ],
+                        'publisher' => ['handler_id' => 'mercure.hub.default.publisher'],
                     ],
                 ]
             );

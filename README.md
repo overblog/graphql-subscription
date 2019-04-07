@@ -13,7 +13,7 @@ composer req overblog/graphql-subscription
 
 ## CORS preflight headers
 
-This does not handle natively CORS preflight headers.
+This library does not handle natively CORS preflight headers.
 
 ## Symfony
 
