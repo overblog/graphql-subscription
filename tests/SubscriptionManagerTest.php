@@ -22,13 +22,13 @@ class SubscriptionManagerTest extends TestCase
 
     public function testNotifyWithoutBus(): void
     {
-        $executor = $this->createExecutor();
+        $executor = $this->createCallableMock();
         $publisher = $this->createPublisher([
             'topic' => 'https://graphql.org/subscriptions/myID',
             'data' => '{"type":"data","payload":{"data":{"inbox":{"message":"hello word!"}}},"extensions":{"id":"myID","topic":"https:\/\/graphql.org\/subscriptions\/myID"}}',
             'target' => 'https://graphql.org/subscriptions/myID',
         ]);
-        $realtimeNotifier = $this->createRealtimeNotifier($publisher, $executor);
+        $subscriptionManager = $this->createSubscriptionManager($publisher, $executor);
         $executor
             ->expects($this->once())
             ->method('__invoke')
@@ -36,72 +36,115 @@ class SubscriptionManagerTest extends TestCase
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;
-        $realtimeNotifier->notify('inbox', ['message' => 'hello word!']);
-        $realtimeNotifier->processNotificationsSpool(false);
+        $subscriptionManager->notify('inbox', ['message' => 'hello word!']);
+        $subscriptionManager->processNotificationsSpool(false);
+    }
+
+    public function testEventStopPropagation(): void
+    {
+        $executor = $this->createCallableMock();
+        $httpClient = $this->createCallableMock();
+        $subscriptionManager = $this->createSubscriptionManager(
+            $this->createPublisher([], $httpClient),
+            $executor
+        );
+        $executor
+            ->expects($this->once())
+            ->method('__invoke')
+            ->willReturnCallback(function (?string $schemaName, array $requestParams, ?RootValue $rootValue) {
+                $rootValue->stopPropagation();
+
+                return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
+            })
+        ;
+        $httpClient
+            ->expects($this->never())
+            ->method('__invoke');
+        $subscriptionManager->notify('inbox', []);
+        $subscriptionManager->processNotificationsSpool(false);
     }
 
     public function testNotificationShouldBeSentOnlyOnProcessSPoolWithoutBus(): void
     {
-        $executor = $this->createExecutor();
-        $realtimeNotifier = $this->createRealtimeNotifier($this->createPublisher(), $executor);
+        $executor = $this->createCallableMock();
+        $subscriptionManager = $this->createSubscriptionManager($this->createPublisher(), $executor);
         $executor
             ->expects($this->never())
             ->method('__invoke')
         ;
-        $realtimeNotifier->notify('inbox', []);
-        $realtimeNotifier->notify('inbox', []);
+        $subscriptionManager->notify('inbox', []);
+        $subscriptionManager->notify('inbox', []);
     }
 
     public function testNotifyWithBus(): void
     {
-        $realtimeNotifier = $this->createRealtimeNotifier($this->createPublisher(), $this->createExecutor());
+        $subscriptionManager = $this->createSubscriptionManager($this->createPublisher(), $this->createCallableMock());
         $messageBus = $this->getMockBuilder(MessageBus::class)->setMethods(['dispatch'])->getMock();
         $messageBus->expects($this->once())
             ->method('dispatch')
-            ->with(new Update('a:3:{s:7:"payload";a:1:{s:5:"inbox";a:1:{s:7:"message";s:3:"Hi!";}}s:10:"schemaName";s:8:"mySchema";s:7:"channel";s:5:"inbox";}'))
+            ->with(new Update('a:3:{s:7:"payload";a:1:{s:7:"message";s:3:"Hi!";}s:10:"schemaName";s:8:"mySchema";s:7:"channel";s:5:"inbox";}'))
             ->willReturn(new Envelope(new \stdClass()));
 
-        $realtimeNotifier->setBus($messageBus);
-        $realtimeNotifier->notify('inbox', ['inbox' => ['message' => 'Hi!']], 'mySchema');
+        $subscriptionManager->setBus($messageBus);
+        $subscriptionManager->notify('inbox', ['message' => 'Hi!'], 'mySchema');
     }
 
-    private function createRealtimeNotifier(callable $publisher, $executor, ?array $storage = null): SubscriptionManager
+    public function testInvoker(): void
     {
-        $storage = $storage ?? [
-            new Subscriber(
-                'myID',
-                '1',
-                'https://graphql.org/subscriptions/myID',
-                'subscription { inbox { message } }',
-                'inbox',
-                null,
-                null,
-                null
-            ),
-        ];
+        $executor = $this->createCallableMock();
+        $publisher = $this->createPublisher([
+            'topic' => 'https://graphql.org/subscriptions/myID',
+            'data' => '{"type":"data","payload":{"data":{"inbox":{"message":"Hi!"}}},"extensions":{"id":"myID","topic":"https:\/\/graphql.org\/subscriptions\/myID"}}',
+            'target' => 'https://graphql.org/subscriptions/myID',
+        ]);
+        $subscriptionManager = $this->createSubscriptionManager($publisher, $executor);
+        $executor
+            ->expects($this->once())
+            ->method('__invoke')
+            ->willReturnCallback(function (?string $schemaName, array $requestParams, ?RootValue $rootValue) {
+                return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
+            })
+        ;
+        $subscriptionManager(new Update(\serialize([
+            'payload' => ['message' => 'Hi!'],
+            'schemaName' => null,
+            'channel' => 'inbox',
+        ])));
+    }
 
-        return new SubscriptionManager(
-            $publisher,
-            new MemorySubscriptionStorage($storage),
+    private function createSubscriptionManager(callable $publisher, $executor, ?array $storage = null): SubscriptionManager
+    {
+        return new SubscriptionManager($publisher,
+            new MemorySubscriptionStorage($storage ?? [
+                    new Subscriber(
+                        'myID',
+                        '1',
+                        'https://graphql.org/subscriptions/myID',
+                        'subscription { inbox { message } }',
+                        'inbox',
+                        null,
+                        null,
+                        null
+                    ),
+                ]),
             $executor,
             'https://graphql.org/subscriptions/{id}',
-            function (): void {}
-        );
+            function (): void {});
     }
 
-    private function createExecutor()
+    private function createCallableMock()
     {
         return $this->createPartialMock(\stdClass::class, ['__invoke']);
     }
 
-    private function createPublisher(array $expectedPostData = [], ?callable $jwtProvider = null, ?string $hubUrl = self::URL): Publisher
+    private function createPublisher(array $expectedPostData = [], callable $httpClient = null, ?callable $jwtProvider = null, ?string $hubUrl = self::URL): Publisher
     {
         return new Publisher(
             $hubUrl,
             $jwtProvider ?? function (): string {
                 return self::JWT;
             },
-            function (string $url, string $jwt, string $postData) use ($expectedPostData): string {
+            $httpClient ?? function (string $url, string $jwt, string $postData) use ($expectedPostData): string {
                 \parse_str($postData, $actualPostData);
                 $this->assertSame($expectedPostData, $actualPostData);
 

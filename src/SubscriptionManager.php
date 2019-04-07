@@ -228,14 +228,6 @@ final class SubscriptionManager
 
     private function handleData(array $data): void
     {
-        if (!\is_array($data)) {
-            throw new \InvalidArgumentException(\sprintf(
-                '"%s" require message to be an array or a json string but got %s',
-                __METHOD__,
-                \gettype($data)
-            ));
-        }
-
         $subscribers = $this->subscribeStorage
             ->findSubscribersByChannelAndSchemaName($data['channel'], $data['schemaName']);
         foreach ($subscribers as $subscriber) {
