@@ -75,6 +75,7 @@ class Configuration implements ConfigurationInterface
                     ->info('URL of mercure hub endpoint.')
                     ->example('https://demo.mercure.rocks/hub')
                 ->end()
+                ->append($this->callableServiceNode('http_client', false))
                 ->arrayNode('publish')
                     ->addDefaultsIfNotSet()
                     ->children()

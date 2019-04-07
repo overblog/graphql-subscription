@@ -17,14 +17,15 @@
     "require": {
         "php": ">=7.1",
         "ext-json": "*",
+        "psr/log": "^1.0",
         "symfony/mercure": "^0.1.0",
-        "psr/log": "^1.0"
+        "webonyx/graphql-php": "*"
     },
     "require-dev": {
         "lcobucci/jwt": "^3.2",
         "symfony/framework-bundle": "^3.4 || ^4.0",
         "symfony/messenger": "^4.0",
-        "phpunit/phpunit": "^5.7.26 || ^6.0 || ^7.2"
+        "phpunit/phpunit": "^7.2"
     },
     "autoload": {
         "psr-4": {
@@ -35,5 +36,8 @@
         "psr-4": {
             "Overblog\\GraphQLSubscription\\Tests\\": "tests/"
         }
+    },
+    "suggest": {
+        "nelmio/cors-bundle": "To manage CORS prefight"
     }
 }

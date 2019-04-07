@@ -39,13 +39,8 @@ class Extension extends BaseExtension implements PrependExtensionInterface
     private function setSubscriptionActionRequestParser(array $config, ContainerBuilder $container): void
     {
         if (!empty($config['request_parser']['id'])) {
-            $parser = new Reference($config['request_parser']['id']);
-            if (null !== $config['request_parser']['method']) {
-                $parser = [$parser, $config['request_parser']['method']];
-            }
-
             $container->findDefinition(EndpointAction::class)
-                ->replaceArgument(1, $parser);
+                ->replaceArgument(1, $this->resolveCallableServiceReference($config['request_parser']));
         }
     }
 
@@ -53,13 +48,9 @@ class Extension extends BaseExtension implements PrependExtensionInterface
     {
         $bus = $config['bus'] ?? null;
         $attributes = null === $bus ? [] : ['bus' => $bus];
-        $executor = new Reference($config['graphql_executor']['id']);
-        if (null !== $config['graphql_executor']['method']) {
-            $executor = [$executor, $config['graphql_executor']['method']];
-        }
 
         $container->findDefinition(SubscriptionManager::class)
-            ->replaceArgument(2, $executor)
+            ->replaceArgument(2, $this->resolveCallableServiceReference($config['graphql_executor']))
             ->replaceArgument(3, $config['topic_url_pattern'])
             ->addMethodCall(
                 'setBus',
@@ -104,8 +95,22 @@ class Extension extends BaseExtension implements PrependExtensionInterface
 
     private function setMercureHubDefinitionArgs(array $config, ContainerBuilder $container): void
     {
-        $container->findDefinition(\sprintf('%s.publisher', $this->getAlias()))
+        $definition = $container->findDefinition(\sprintf('%s.publisher', $this->getAlias()))
             ->replaceArgument(0, $config['mercure_hub']['url']);
+        if (!empty($config['http_client']['id'])) {
+            $definition
+                ->replaceArgument(2, $this->resolveCallableServiceReference($config['http_client']));
+        }
+    }
+
+    private function resolveCallableServiceReference(array $callableServiceParams)
+    {
+        $callableServiceRef = new Reference($callableServiceParams['id']);
+        if (null !== $callableServiceParams['method']) {
+            $callableServiceRef = [$callableServiceRef, $callableServiceParams['method']];
+        }
+
+        return $callableServiceRef;
     }
 
     public function getAlias()

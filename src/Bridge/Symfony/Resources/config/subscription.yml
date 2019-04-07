@@ -4,6 +4,7 @@ services:
         arguments:
             - ~
             - '@overblog_graphql_subscription.jwt_publish_provider'
+            - ~
 
     Overblog\GraphQLSubscription\SubscriptionManager:
         arguments:

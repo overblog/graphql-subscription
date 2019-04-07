@@ -17,14 +17,10 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 class EndpointAction
 {
     private $requestParser;
-    private $responseHandler;
 
-    public function __construct(
-        ?callable $requestParser = null,
-        ?callable $responseHandler = null
-    ) {
+    public function __construct(?callable $requestParser = null)
+    {
         $this->requestParser = $requestParser ?? [$this, 'parseRequest'];
-        $this->responseHandler = $responseHandler ?? [$this, 'createJsonResponse'];
     }
 
     public function __invoke(
@@ -33,7 +29,7 @@ class EndpointAction
         ?EventDispatcherInterface $dispatcher = null,
         ?string $schemaName = null
     ): Response {
-        return ($this->responseHandler)($request, function (Request $request) use ($schemaName, $realtimeNotifier, $dispatcher): array {
+        return $this->createJsonResponse($request, function (Request $request) use ($schemaName, $realtimeNotifier, $dispatcher): array {
             [$type, $id, $payload] = ($this->requestParser)($request);
             try {
                 $extra = [];
