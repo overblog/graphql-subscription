@@ -112,7 +112,7 @@ GQL;
     private function processResponse(
         array $expectedPayload,
         ?string $expectedSchemaName,
-        string $query = self::SUBSCRIPTION_QUERY,
+        string $expectedQuery = self::SUBSCRIPTION_QUERY,
         ?EventDispatcher $dispatcher = null
     ): array {
         $request = new Request(
@@ -125,7 +125,7 @@ GQL;
             \json_encode([
                 'id' => 1,
                 'type' => MessageTypes::GQL_START,
-                'payload' => ['query' => $query], ]
+                'payload' => ['query' => $expectedQuery], ]
             )
         );
         $request->setMethod('POST');
@@ -139,18 +139,19 @@ GQL;
                     $storage = new MemorySubscriptionStorage(),
                     function (
                         ?string $schemaName,
-                        array $requestParams,
-                        $rootValue = null
-                    ) use ($expectedSchemaName, $expectedPayload, $query): array {
+                        string $query,
+                        $rootValue = null,
+                        $context = null,
+                        ?array $variableValues = null,
+                        ?string $operationName = null
+                    ) use ($expectedSchemaName, $expectedPayload, $expectedQuery): array {
                         static $previousCall = 0;
                         $this->assertSame(0, $previousCall);
                         $this->assertSame($expectedSchemaName, $schemaName);
+                        $this->assertNull($variableValues);
+                        $this->assertNull($operationName);
                         $this->assertNull($rootValue);
-                        $this->assertSame([
-                            'query' => $query,
-                            'variables' => null,
-                            'operationName' => null,
-                        ], $requestParams);
+                        $this->assertSame($expectedQuery, $query);
 
                         ++$previousCall;
 

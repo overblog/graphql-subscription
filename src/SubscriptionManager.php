@@ -164,7 +164,7 @@ class SubscriptionManager
 
             case MessageTypes::GQL_START:
                 $payload = [
-                    'query' => null,
+                    'query' => '',
                     'variables' => null,
                     'operationName' => null,
                 ];
@@ -174,9 +174,11 @@ class SubscriptionManager
                 }
 
                 return $this->handleStart(
+                    $payload['query'],
                     $data['id'] ?? null,
-                    $payload,
                     $schemaName,
+                    $payload['variables'],
+                    $payload['operationName'],
                     $extra
                 );
 
@@ -192,19 +194,25 @@ class SubscriptionManager
     }
 
     private function handleStart(
+        string $query,
         ?string $subscriptionID,
-        ?array $payload,
-        ?string $schemaName = null,
-        array $extra = []
+        ?string $schemaName,
+        ?array $variableValues,
+        ?string $operationName,
+        ?array $extra = null
     ): array {
-        $result = ($this->executorHandler)($schemaName, $payload);
-        if ($result instanceof ExecutionResult) {
-            $result = $result->toArray();
-        }
+        $result = $this->executeQuery(
+            $schemaName,
+            $query,
+            null,
+            null,
+            $variableValues,
+            $operationName
+        );
 
         if (empty($result['errors'])) {
-            $document = self::parseQuery($payload['query']);
-            $operationDef = self::extractOperationDefinition($document, $payload['operationName']);
+            $document = self::parseQuery($query);
+            $operationDef = self::extractOperationDefinition($document, $operationName);
             $channel = self::extractSubscriptionChannel($operationDef);
             $id = $this->generateId($subscriptionID);
             $topic = $this->buildTopicUrl($id, $channel, $schemaName);
@@ -213,10 +221,10 @@ class SubscriptionManager
                 $id,
                 $subscriptionID,
                 $topic,
-                $payload['query'],
+                $query,
                 $channel,
-                $payload['variables'],
-                $payload['operationName'],
+                $variableValues,
+                $operationName,
                 $schemaName,
                 $extra
             ));
@@ -264,13 +272,37 @@ class SubscriptionManager
         );
     }
 
+    private function executeQuery(
+        ?string $schemaName,
+        string $query,
+        ?RootValue $rootValue = null,
+        $context = null,
+        ?array $variableValues = null,
+        ?string $operationName = null
+    ): array {
+        $result = ($this->executorHandler)(
+            $this->schemaBuilder ? ($this->schemaBuilder)($schemaName) : $schemaName,
+            $query,
+            $rootValue,
+            $context,
+            $variableValues,
+            $operationName
+        );
+
+        if ($result instanceof ExecutionResult) {
+            $result = $result->toArray();
+        }
+
+        return $result;
+    }
+
     private function executeAndSendNotification($payload, Subscriber $subscriber): void
     {
-        $result = ($this->executorHandler)(
-            $this->schemaBuilder ? ($this->schemaBuilder)($subscriber->getSchemaName()) : $subscriber->getSchemaName(),
+        $result = $this->executeQuery(
+            $subscriber->getSchemaName(),
             $subscriber->getQuery(),
             $rootValue = new RootValue($payload, $subscriber),
-            $context = null,
+            null,
             $subscriber->getVariables(),
             $subscriber->getOperationName()
         );

@@ -25,7 +25,7 @@ final class Subscriber implements \Serializable
         ?array $variables,
         ?string $operationName,
         ?string $schemaName,
-        array $extras = []
+        ?array $extras = null
     ) {
         $this->id = $id;
         $this->subscriptionId = $subscriptionId;
@@ -78,7 +78,7 @@ final class Subscriber implements \Serializable
         return $this->schemaName;
     }
 
-    public function getExtras(): array
+    public function getExtras(): ?array
     {
         return $this->extras;
     }
