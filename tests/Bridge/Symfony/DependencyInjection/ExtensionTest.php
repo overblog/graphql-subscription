@@ -6,6 +6,7 @@ namespace Overblog\GraphQLSubscription\Tests\Bridge\Symfony\DependencyInjection;
 
 use Overblog\GraphQLSubscription\Bridge\Symfony\DependencyInjection\Extension;
 use Overblog\GraphQLSubscription\Bridge\Symfony\EventListener\SpoolNotificationsHandler;
+use Overblog\GraphQLSubscription\Bridge\Symfony\ExecutorAdapter\GraphQLBundleExecutorAdapter;
 use Overblog\GraphQLSubscription\Provider\JwtPublishProvider;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
@@ -148,8 +149,7 @@ class ExtensionTest extends TestCase
         $container->expects($this->at(3))
             ->method('prependExtensionConfig')
             ->with('overblog_graphql_subscription', [
-                'graphql_executor' => 'overblog_graphql.executor::execute',
-                'schema_builder' => 'Overblog\\GraphQLBundle\\Request\\Executor::getSchema',
+                'graphql_executor' => GraphQLBundleExecutorAdapter::class,
             ]);
         $extension->prepend($container);
     }

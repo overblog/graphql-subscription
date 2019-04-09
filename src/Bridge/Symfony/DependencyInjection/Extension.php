@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\DependencyInjection;
 
 use Overblog\GraphQLSubscription\Bridge\Symfony\Action\EndpointAction;
+use Overblog\GraphQLSubscription\Bridge\Symfony\ExecutorAdapter\GraphQLBundleExecutorAdapter;
 use Overblog\GraphQLSubscription\Provider\JwtPublishProvider;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
@@ -57,6 +58,11 @@ class Extension extends BaseExtension implements PrependExtensionInterface
                 [new Reference($bus ?? 'message_bus', ContainerInterface::IGNORE_ON_INVALID_REFERENCE)]
             )
             ->addTag('messenger.message_handler', $attributes);
+
+        if (GraphQLBundleExecutorAdapter::class === $config['graphql_executor']) {
+            $container->register(GraphQLBundleExecutorAdapter::class)
+                ->setArguments([new Reference('Overblog\\GraphQLBundle\\Request\\Executor')]);
+        }
     }
 
     private function setStorageDefinitions(array $config, ContainerBuilder $container): void
@@ -152,8 +158,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             $container->prependExtensionConfig(
                 Configuration::NAME,
                 [
-                    'graphql_executor' => 'overblog_graphql.executor::execute',
-                    'schema_builder' => 'Overblog\\GraphQLBundle\\Request\\Executor::getSchema',
+                    'graphql_executor' => GraphQLBundleExecutorAdapter::class,
                 ]
             );
         } elseif ($container->hasExtension('api_platform')) {
