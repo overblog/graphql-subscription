@@ -149,7 +149,7 @@ class ExtensionTest extends TestCase
             ->method('prependExtensionConfig')
             ->with('overblog_graphql_subscription', [
                 'graphql_executor' => 'overblog_graphql.executor::execute',
-                'overblog_graphql.schema_builder::getSchema',
+                'schema_builder' => 'overblog_graphql.schema_builder::getSchema',
             ]);
         $extension->prepend($container);
     }

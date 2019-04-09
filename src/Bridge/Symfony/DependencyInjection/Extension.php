@@ -153,7 +153,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
                 Configuration::NAME,
                 [
                     'graphql_executor' => 'overblog_graphql.executor::execute',
-                    'overblog_graphql.schema_builder::getSchema',
+                    'schema_builder' => 'overblog_graphql.schema_builder::getSchema',
                 ]
             );
         } elseif ($container->hasExtension('api_platform')) {
