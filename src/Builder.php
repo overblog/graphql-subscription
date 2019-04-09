@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription;
 
+use GraphQL\GraphQL;
 use Overblog\GraphQLSubscription\Provider\JwtPublishProvider;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
@@ -54,11 +55,9 @@ class Builder
     /** @var LoggerInterface|null */
     private $logger = null;
 
-    /**
-     * @param string $hubUrl
-     *
-     * @return self
-     */
+    /** @var callable|null */
+    private $schemaBuilder = null;
+
     public function setHubUrl(string $hubUrl): self
     {
         $this->hubUrl = $hubUrl;
@@ -66,11 +65,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param string $topicUrlPattern
-     *
-     * @return self
-     */
     public function setTopicUrlPattern(string $topicUrlPattern): self
     {
         $this->topicUrlPattern = $topicUrlPattern;
@@ -78,11 +72,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param callable $executorHandler
-     *
-     * @return self
-     */
     public function setExecutorHandler(callable $executorHandler): self
     {
         $this->executorHandler = $executorHandler;
@@ -90,11 +79,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param Publisher|null $publisher
-     *
-     * @return self
-     */
     public function setPublisher(?Publisher $publisher): self
     {
         $this->publisher = $publisher;
@@ -102,11 +86,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param callable|null $publisherHttpClient
-     *
-     * @return self
-     */
     public function setPublisherHttpClient(?callable $publisherHttpClient): self
     {
         $this->publisherHttpClient = $publisherHttpClient;
@@ -114,11 +93,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param callable|null $publisherProvider
-     *
-     * @return self
-     */
     public function setPublisherProvider(?callable $publisherProvider): self
     {
         $this->publisherProvider = $publisherProvider;
@@ -126,11 +100,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param string|null $publisherSecretKey
-     *
-     * @return self
-     */
     public function setPublisherSecretKey(?string $publisherSecretKey): self
     {
         $this->publisherSecretKey = $publisherSecretKey;
@@ -138,11 +107,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param callable|null $subscriberProvider
-     *
-     * @return self
-     */
     public function setSubscriberProvider(?callable $subscriberProvider): self
     {
         $this->subscriberProvider = $subscriberProvider;
@@ -150,11 +114,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param string|null $subscriberSecretKey
-     *
-     * @return self
-     */
     public function setSubscriberSecretKey(?string $subscriberSecretKey): self
     {
         $this->subscriberSecretKey = $subscriberSecretKey;
@@ -162,11 +121,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param MessageBusInterface|null $messengerBus
-     *
-     * @return self
-     */
     public function setMessengerBus(?MessageBusInterface $messengerBus): self
     {
         $this->messengerBus = $messengerBus;
@@ -174,11 +128,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param SubscribeStorageInterface|null $subscribeStorage
-     *
-     * @return self
-     */
     public function setSubscribeStorage(?SubscribeStorageInterface $subscribeStorage): self
     {
         $this->subscribeStorage = $subscribeStorage;
@@ -186,11 +135,6 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param string|null $subscribeStoragePath
-     *
-     * @return self
-     */
     public function setSubscribeStoragePath(?string $subscribeStoragePath): self
     {
         $this->subscribeStoragePath = $subscribeStoragePath;
@@ -198,14 +142,16 @@ class Builder
         return $this;
     }
 
-    /**
-     * @param LoggerInterface|null $logger
-     *
-     * @return self
-     */
     public function setLogger(?LoggerInterface $logger): self
     {
         $this->logger = $logger;
+
+        return $this;
+    }
+
+    public function setSchemaBuilder(?callable $schemaBuilder): self
+    {
+        $this->schemaBuilder = $schemaBuilder;
 
         return $this;
     }
@@ -228,10 +174,11 @@ class Builder
         return new SubscriptionManager(
             $publisher,
             $subscribeStorage,
-            $this->executorHandler,
+            $this->executorHandler ?? [GraphQL::class, 'executeQuery'],
             $this->topicUrlPattern,
             $subscriberProvider,
-            $this->logger
+            $this->logger,
+            $this->schemaBuilder
         );
     }
 }

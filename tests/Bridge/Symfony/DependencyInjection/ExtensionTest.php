@@ -148,7 +148,8 @@ class ExtensionTest extends TestCase
         $container->expects($this->at(3))
             ->method('prependExtensionConfig')
             ->with('overblog_graphql_subscription', [
-                'graphql_executor' => 'Overblog\\GraphQLBundle\\Request\\Executor::execute',
+                'graphql_executor' => 'overblog_graphql.executor::execute',
+                'overblog_graphql.schema_builder::getSchema',
             ]);
         $extension->prepend($container);
     }
@@ -189,6 +190,7 @@ class ExtensionTest extends TestCase
             ->method('prependExtensionConfig')
             ->with('overblog_graphql_subscription', [
                 'graphql_executor' => 'api_platform.graphql.executor::executeQuery',
+                'schema_builder' => 'api_platform.graphql.schema_builder::getSchema',
             ]);
         $extension->prepend($container);
     }

@@ -32,7 +32,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, array $requestParams, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;
@@ -51,7 +51,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, array $requestParams, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
                 $rootValue->stopPropagation();
 
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
@@ -101,7 +101,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, array $requestParams, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;

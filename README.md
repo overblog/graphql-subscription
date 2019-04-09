@@ -11,6 +11,25 @@ or [API Platform](https://github.com/api-platform/api-platform) or other Symfony
 composer req overblog/graphql-subscription
 ```
 
+### Default builder executor
+
+```php
+<?php
+use GraphQL\Executor\ExecutionResult;
+use GraphQL\GraphQL;
+
+function (
+    $schema,
+    $source,
+    $rootValue = null,
+    $context = null,
+    $variableValues = null,
+    ?string $operationName = null
+): ExecutionResult {
+    return GraphQL::executeQuery(...func_get_args());
+}
+```
+
 ## CORS preflight headers
 
 This library does not handle natively CORS preflight headers.
@@ -58,6 +77,7 @@ Symfony Flex generates:
     #   for OverblogGraphQLBundle: "Overblog\\GraphQLBundle\\Request\\Executor::execute"
     #   for API-Plateform: "api_platform.graphql.executor::executeQuery"
         graphql_executor: ~
+        schema_builder: ~
     ```
 
 * default routes in `config/routes/graphql_subscription.yaml`

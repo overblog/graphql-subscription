@@ -51,6 +51,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         $container->findDefinition(SubscriptionManager::class)
             ->replaceArgument(2, $this->resolveCallableServiceReference($config['graphql_executor']))
             ->replaceArgument(3, $config['topic_url_pattern'])
+            ->replaceArgument(6, $this->resolveCallableServiceReference($config['schema_builder']))
             ->addMethodCall(
                 'setBus',
                 [new Reference($bus ?? 'message_bus', ContainerInterface::IGNORE_ON_INVALID_REFERENCE)]
@@ -150,12 +151,18 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         if ($container->hasExtension('overblog_graphql')) {
             $container->prependExtensionConfig(
                 Configuration::NAME,
-                ['graphql_executor' => 'Overblog\\GraphQLBundle\\Request\\Executor::execute']
+                [
+                    'graphql_executor' => 'overblog_graphql.executor::execute',
+                    'overblog_graphql.schema_builder::getSchema',
+                ]
             );
         } elseif ($container->hasExtension('api_platform')) {
             $container->prependExtensionConfig(
                 Configuration::NAME,
-                ['graphql_executor' => 'api_platform.graphql.executor::executeQuery']
+                [
+                    'graphql_executor' => 'api_platform.graphql.executor::executeQuery',
+                    'schema_builder' => 'api_platform.graphql.schema_builder::getSchema',
+                ]
             );
         }
     }

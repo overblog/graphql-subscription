@@ -29,7 +29,7 @@ class SubscriptionManager
 
     private $subscribeStorage;
 
-    private $executor;
+    private $executorHandler;
 
     private $topicUrlPattern;
 
@@ -41,6 +41,8 @@ class SubscriptionManager
 
     private $logger;
 
+    private $schemaBuilder;
+
     /**
      * @param Publisher|callable        $publisher
      * @param SubscribeStorageInterface $subscribeStorage
@@ -48,6 +50,7 @@ class SubscriptionManager
      * @param string                    $topicUrlPattern
      * @param callable                  $jwtSubscribeProvider
      * @param LoggerInterface|null      $logger
+     * @param callable|null             $schemaBuilder
      */
     public function __construct(
         callable $publisher,
@@ -55,15 +58,17 @@ class SubscriptionManager
         callable $executor,
         string $topicUrlPattern,
         callable $jwtSubscribeProvider,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?callable $schemaBuilder = null
     ) {
         $this->publisher = $publisher;
-        $this->executor = $executor;
+        $this->executorHandler = $executor;
         $this->subscribeStorage = $subscribeStorage;
         $this->validateTopicUrlPattern($topicUrlPattern);
         $this->topicUrlPattern = $topicUrlPattern;
         $this->jwtSubscribeProvider = $jwtSubscribeProvider;
         $this->logger = $logger ?? new NullLogger();
+        $this->schemaBuilder = $schemaBuilder;
     }
 
     public function validateTopicUrlPattern(string $topicUrlPattern): void
@@ -76,14 +81,21 @@ class SubscriptionManager
         }
     }
 
-    public function getExecutor(): callable
+    public function getExecutorHandler(): callable
     {
-        return $this->executor;
+        return $this->executorHandler;
     }
 
     public function getSubscribeStorage(): SubscribeStorageInterface
     {
         return $this->subscribeStorage;
+    }
+
+    public function setSchemaBuilder(?callable $schemaBuilder): self
+    {
+        $this->schemaBuilder = $schemaBuilder;
+
+        return $this;
     }
 
     public function setBus(?MessageBusInterface $bus): self
@@ -185,7 +197,7 @@ class SubscriptionManager
         ?string $schemaName = null,
         array $extra = []
     ): array {
-        $result = ($this->executor)($schemaName, $payload);
+        $result = ($this->executorHandler)($schemaName, $payload);
         if ($result instanceof ExecutionResult) {
             $result = $result->toArray();
         }
@@ -254,17 +266,16 @@ class SubscriptionManager
 
     private function executeAndSendNotification($payload, Subscriber $subscriber): void
     {
-        $result = ($this->executor)(
-            $subscriber->getSchemaName(),
-            [
-                'query' => $subscriber->getQuery(),
-                'variables' => $subscriber->getVariables(),
-                'operationName' => $subscriber->getOperationName(),
-            ],
-            $event = new RootValue($payload, $subscriber)
+        $result = ($this->executorHandler)(
+            $this->schemaBuilder ? ($this->schemaBuilder)($subscriber->getSchemaName()) : $subscriber->getSchemaName(),
+            $subscriber->getQuery(),
+            $rootValue = new RootValue($payload, $subscriber),
+            $context = null,
+            $subscriber->getVariables(),
+            $subscriber->getOperationName()
         );
 
-        if (!$event->isPropagationStopped()) {
+        if (!$rootValue->isPropagationStopped()) {
             $update = new MercureUpdate(
                 $subscriber->getTopic(),
                 \json_encode([

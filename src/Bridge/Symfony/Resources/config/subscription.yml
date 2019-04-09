@@ -14,6 +14,7 @@ services:
             - ~
             - '@overblog_graphql_subscription.jwt_subscribe_provider'
             - '@?logger'
+            - ~
 
     Overblog\GraphQLSubscription\Bridge\Symfony\EventListener\SpoolNotificationsHandler:
         arguments:

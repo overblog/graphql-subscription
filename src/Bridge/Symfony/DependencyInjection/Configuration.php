@@ -53,6 +53,7 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
                 ->append($this->callableServiceNode('graphql_executor'))
+                ->append($this->callableServiceNode('schema_builder', false))
                 ->append($this->callableServiceNode('request_parser', false))
             ->end()
         ->end();
