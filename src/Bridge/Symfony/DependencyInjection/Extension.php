@@ -59,7 +59,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
             )
             ->addTag('messenger.message_handler', $attributes);
 
-        if (GraphQLBundleExecutorAdapter::class === $config['graphql_executor']) {
+        if (GraphQLBundleExecutorAdapter::class === $config['graphql_executor']['id']) {
             $container->register(GraphQLBundleExecutorAdapter::class)
                 ->setArguments([new Reference('Overblog\\GraphQLBundle\\Request\\Executor')]);
         }
