@@ -1,28 +1,6 @@
 services:
-    overblog_graphql_subscription.publisher:
-        class: Symfony\Component\Mercure\Publisher
-        arguments:
-            - ~
-            - '@overblog_graphql_subscription.jwt_publish_provider'
-            - ~
-
-    Overblog\GraphQLSubscription\SubscriptionManager:
-        arguments:
-            - '@overblog_graphql_subscription.publisher'
-            - '@Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface'
-            - ~
-            - ~
-            - '@overblog_graphql_subscription.jwt_subscribe_provider'
-            - '@?logger'
-            - ~
-
     Overblog\GraphQLSubscription\Bridge\Symfony\EventListener\SpoolNotificationsHandler:
         arguments:
             - '@Overblog\GraphQLSubscription\SubscriptionManager'
         tags:
             - {name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate}
-
-    Overblog\GraphQLSubscription\Bridge\Symfony\Action\EndpointAction:
-        arguments:
-            - ~
-        tags: ['controller.service_arguments']

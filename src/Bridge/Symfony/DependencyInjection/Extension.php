@@ -33,26 +33,34 @@ class Extension extends BaseExtension implements PrependExtensionInterface
 
         $this->setMercureHubDefinition($config, $container);
         $this->setJwtProvidersDefinitions($config, $container);
-        $this->setStorageDefinitions($config, $container);
-        $this->setSubscriptionManagerDefinitionArgs($config, $container);
+        $this->setStorageDefinition($config, $container);
+        $this->setSubscriptionManagerDefinition($config, $container);
         $this->setSubscriptionActionRequestParser($config, $container);
     }
 
     private function setSubscriptionActionRequestParser(array $config, ContainerBuilder $container): void
     {
-        $container->findDefinition(EndpointAction::class)
-            ->replaceArgument(0, $this->resolveCallableServiceReference($config['request_parser']));
+        $container->register(EndpointAction::class)
+            ->setArguments([$this->resolveCallableServiceReference($config['request_parser'])])
+            ->addTag('controller.service_arguments')
+        ;
     }
 
-    private function setSubscriptionManagerDefinitionArgs(array $config, ContainerBuilder $container): void
+    private function setSubscriptionManagerDefinition(array $config, ContainerBuilder $container): void
     {
         $bus = $config['bus'] ?? null;
         $attributes = null === $bus ? [] : ['bus' => $bus];
 
-        $container->findDefinition(SubscriptionManager::class)
-            ->replaceArgument(2, $this->resolveCallableServiceReference($config['graphql_executor']))
-            ->replaceArgument(3, $config['topic_url_pattern'])
-            ->replaceArgument(6, $this->resolveCallableServiceReference($config['schema_builder']))
+        $container->register(SubscriptionManager::class)
+            ->setArguments([
+                new Reference($this->getAlias().'.publisher'),
+                new Reference(SubscribeStorageInterface::class),
+                $this->resolveCallableServiceReference($config['graphql_executor']),
+                $config['topic_url_pattern'],
+                new Reference($this->getAlias().'.jwt_subscribe_provider'),
+                new Reference('logger', ContainerInterface::IGNORE_ON_INVALID_REFERENCE),
+                $this->resolveCallableServiceReference($config['schema_builder']),
+            ])
             ->addMethodCall(
                 'setBus',
                 [new Reference($bus ?? 'message_bus', ContainerInterface::IGNORE_ON_INVALID_REFERENCE)]
@@ -65,7 +73,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         }
     }
 
-    private function setStorageDefinitions(array $config, ContainerBuilder $container): void
+    private function setStorageDefinition(array $config, ContainerBuilder $container): void
     {
         $storageID = $config['storage']['handler_id'];
         if (FilesystemSubscribeStorage::class === $storageID) {
