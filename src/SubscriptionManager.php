@@ -232,12 +232,10 @@ class SubscriptionManager
             return [
                 'type' => MessageTypes::GQL_DATA,
                 'id' => $subscriptionID,
+                'subId' => $id,
+                'topic' => $topic,
+                'token' => ($this->jwtSubscribeProvider)($topic),
                 'payload' => $result,
-                'extensions' => [
-                    'id' => $id,
-                    'topic' => $topic,
-                    'token' => ($this->jwtSubscribeProvider)($topic),
-                ],
             ];
         } else {
             return [
