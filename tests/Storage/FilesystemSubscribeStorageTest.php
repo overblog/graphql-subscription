@@ -98,7 +98,6 @@ class FilesystemSubscribeStorageTest extends TestCase
     {
         return [
             'id' => 'my-unique-id',
-            'subscriptionId' => '1',
             'topic' => 'http://mytopic.org/unique-id-1',
             'query' => 'baz {q}',
             'channel' => 'channel',
@@ -112,7 +111,6 @@ class FilesystemSubscribeStorageTest extends TestCase
     {
         return [
             'id' => 'my-unique-id-2',
-            'subscriptionId' => '2',
             'topic' => 'http://mytopic.org/unique-id-2',
             'query' => '{q}',
             'channel' => 'channel2',

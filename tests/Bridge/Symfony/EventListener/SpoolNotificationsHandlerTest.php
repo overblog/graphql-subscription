@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overblog\GraphQLSubscription\Tests\Bridge\Symfony\DependencyInjection;
+namespace Overblog\GraphQLSubscription\Tests\Bridge\Symfony\EventListener;
 
 use Overblog\GraphQLSubscription\Bridge\Symfony\EventListener\SpoolNotificationsHandler;
 use Overblog\GraphQLSubscription\SubscriptionManager;
@@ -18,8 +18,6 @@ class SpoolNotificationsHandlerTest extends TestCase
             ->getMock();
         $subscriptionManager->expects($this->once())
             ->method('processNotificationsSpool');
-
-        $listener = new SpoolNotificationsHandler($subscriptionManager);
-        $listener->onKernelTerminate();
+        (new SpoolNotificationsHandler($subscriptionManager))->onKernelTerminate();
     }
 }

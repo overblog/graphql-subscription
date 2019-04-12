@@ -174,12 +174,7 @@ class SubscriptionManager
                 }
 
                 return $this->handleStart(
-                    $payload['query'],
-                    $data['id'] ?? null,
-                    $schemaName,
-                    $payload['variables'],
-                    $payload['operationName'],
-                    $extra
+                    $payload['query'], $schemaName, $payload['variables'], $payload['operationName'], $extra
                 );
 
             case MessageTypes::GQL_STOP:
@@ -194,12 +189,7 @@ class SubscriptionManager
     }
 
     private function handleStart(
-        string $query,
-        ?string $subscriptionID,
-        ?string $schemaName,
-        ?array $variableValues,
-        ?string $operationName,
-        ?array $extra = null
+        string $query, ?string $schemaName, ?array $variableValues, ?string $operationName, ?array $extra
     ): array {
         $result = $this->executeQuery(
             $schemaName,
@@ -214,12 +204,11 @@ class SubscriptionManager
             $document = self::parseQuery($query);
             $operationDef = self::extractOperationDefinition($document, $operationName);
             $channel = self::extractSubscriptionChannel($operationDef);
-            $id = $this->generateId($subscriptionID);
+            $id = $this->generateId();
             $topic = $this->buildTopicUrl($id, $channel, $schemaName);
 
             $this->getSubscribeStorage()->store(new Subscriber(
                 $id,
-                $subscriptionID,
                 $topic,
                 $query,
                 $channel,
@@ -231,8 +220,7 @@ class SubscriptionManager
 
             return [
                 'type' => MessageTypes::GQL_DATA,
-                'id' => $subscriptionID,
-                'subId' => $id,
+                'id' => $id,
                 'topic' => $topic,
                 'accessToken' => ($this->jwtSubscribeProvider)($topic),
                 'payload' => $result,
@@ -254,9 +242,9 @@ class SubscriptionManager
         }
     }
 
-    private function generateId(?string $subscriptionId): string
+    private function generateId(): string
     {
-        $sha1 = \sha1(\uniqid(\time().$subscriptionId.\random_int(0, \PHP_INT_MAX), true));
+        $sha1 = \sha1(\uniqid(\time().\random_int(0, \PHP_INT_MAX), true));
 
         return \substr($sha1, 0, 12);
     }

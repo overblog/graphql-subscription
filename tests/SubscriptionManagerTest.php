@@ -118,7 +118,6 @@ class SubscriptionManagerTest extends TestCase
             new MemorySubscriptionStorage($storage ?? [
                     new Subscriber(
                         'myID',
-                        '1',
                         'https://graphql.org/subscriptions/myID',
                         'subscription { inbox { message } }',
                         'inbox',
