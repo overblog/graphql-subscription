@@ -42,7 +42,7 @@ GQL;
         $result = $response->getContent();
         $actual = \json_decode($result, true);
         $this->assertRegExp('@^https://graphql.org/subscriptions/[a-zA-Z0-9]{12}@', $actual['topic']);
-        $actualParseToken = (new Parser())->parse($actual['token']);
+        $actualParseToken = (new Parser())->parse($actual['accessToken']);
         $this->assertSame(['subscribe' => [$actual['topic']]], (array) $actualParseToken->getClaim('mercure'));
         $this->assertTrue($actualParseToken->verify(new Sha256(), self::SECRET_SUBSCRIBER_KEY));
         $this->assertSame($expectedPayload, $actual['payload'], $result);

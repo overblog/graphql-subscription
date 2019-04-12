@@ -234,7 +234,7 @@ class SubscriptionManager
                 'id' => $subscriptionID,
                 'subId' => $id,
                 'topic' => $topic,
-                'token' => ($this->jwtSubscribeProvider)($topic),
+                'accessToken' => ($this->jwtSubscribeProvider)($topic),
                 'payload' => $result,
             ];
         } else {
