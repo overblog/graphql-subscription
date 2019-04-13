@@ -38,4 +38,14 @@ final class MemorySubscriptionStorage implements SubscribeStorageInterface
             }
         }
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function delete(string $subscriberID): bool
+    {
+        unset($this->storage[$subscriberID]);
+
+        return true;
+    }
 }

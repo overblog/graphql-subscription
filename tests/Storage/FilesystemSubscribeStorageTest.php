@@ -86,6 +86,22 @@ class FilesystemSubscribeStorageTest extends TestCase
         $this->assertSubscriberProperties($this->subscriber2Args(), $subscriber);
     }
 
+    /**
+     * @depends testStore
+     *
+     * @param FilesystemSubscribeStorage $storage
+     */
+    public function testDelete(FilesystemSubscribeStorage $storage): void
+    {
+        $storage->delete('my-unique-id');
+        /** @var \Generator $subscribers */
+        $subscribers = $storage->findSubscribersByChannelAndSchemaName('channel', 'main');
+        $this->assertEmpty(\iterator_to_array($subscribers));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Subscriber with id "my-unique-id" could not be found.');
+        $storage->delete('my-unique-id');
+    }
+
     private function assertSubscriberProperties(array $expectedProperties, Subscriber $subscriber): void
     {
         foreach ($expectedProperties as $name => $value) {

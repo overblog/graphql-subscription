@@ -13,7 +13,7 @@ interface SubscribeStorageInterface
      *
      * @return bool
      *
-     * @throws \RuntimeException if could not store subscription
+     * @throws \RuntimeException if could not store subscriber
      */
     public function store(Subscriber $subscriber): bool;
 
@@ -26,4 +26,13 @@ interface SubscribeStorageInterface
      * @return Subscriber[]|iterable|\Generator
      */
     public function findSubscribersByChannelAndSchemaName(string $channel, ?string $schemaName): iterable;
+
+    /**
+     * @param string $subscriberID
+     *
+     * @return bool
+     *
+     * @throws \InvalidArgumentException if could not find subscriber
+     */
+    public function delete(string $subscriberID): bool;
 }

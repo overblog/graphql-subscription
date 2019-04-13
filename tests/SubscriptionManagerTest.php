@@ -25,8 +25,9 @@ class SubscriptionManagerTest extends TestCase
         $executor = $this->createCallableMock();
         $publisher = $this->createPublisher([
             'topic' => 'https://graphql.org/subscriptions/myID',
-            'data' => '{"type":"data","payload":{"data":{"inbox":{"message":"hello word!"}}},"extensions":{"id":"myID","topic":"https:\/\/graphql.org\/subscriptions\/myID"}}',
+            'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"hello word!"}}},"topic":"https:\/\/graphql.org\/subscriptions\/myID"}',
             'target' => 'https://graphql.org/subscriptions/myID',
+            'id' => 'event-myID',
         ]);
         $subscriptionManager = $this->createSubscriptionManager($publisher, $executor);
         $executor
@@ -94,8 +95,9 @@ class SubscriptionManagerTest extends TestCase
         $executor = $this->createCallableMock();
         $publisher = $this->createPublisher([
             'topic' => 'https://graphql.org/subscriptions/myID',
-            'data' => '{"type":"data","payload":{"data":{"inbox":{"message":"Hi!"}}},"extensions":{"id":"myID","topic":"https:\/\/graphql.org\/subscriptions\/myID"}}',
+            'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"Hi!"}}},"topic":"https:\/\/graphql.org\/subscriptions\/myID"}',
             'target' => 'https://graphql.org/subscriptions/myID',
+            'id' => 'event-myID',
         ]);
         $subscriptionManager = $this->createSubscriptionManager($publisher, $executor);
         $executor

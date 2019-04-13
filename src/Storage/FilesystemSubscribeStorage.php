@@ -37,7 +37,7 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
         if ($this->write($fileName, $subscriber)) {
             return true;
         } else {
-            throw new \RuntimeException(\sprintf('Failed to write subscription to file "%s".', $fileName));
+            throw new \RuntimeException(\sprintf('Failed to write subscriber to file "%s".', $fileName));
         }
     }
 
@@ -60,6 +60,33 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
                 // Ignoring files that could not be unserialized
             }
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function delete(string $subscriberID): bool
+    {
+        $fileName = $this->findOneByID($subscriberID);
+        if (null === $fileName) {
+            throw new \InvalidArgumentException(\sprintf(
+                'Subscriber with id "%s" could not be found.',
+                $subscriberID
+            ));
+        }
+
+        return @\unlink($fileName);
+    }
+
+    private function findOneByID(string $subscriberID): ?string
+    {
+        $pattern = \sprintf(
+            '%s/%s--*',
+            $this->directory,
+            $subscriberID
+        );
+
+        return \glob($pattern)[0] ?? null;
     }
 
     private function write(string $file, Subscriber $subscriber): bool

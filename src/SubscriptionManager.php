@@ -155,13 +155,6 @@ class SubscriptionManager
         $type = $data['type'] ?? null;
 
         switch ($type) {
-            case MessageTypes::GQL_CONNECTION_INIT:
-            case MessageTypes::GQL_CONNECTION_TERMINATE:
-                return [
-                    'type' => MessageTypes::GQL_CONNECTION_ACK,
-                    'payload' => [],
-                ];
-
             case MessageTypes::GQL_START:
                 $payload = [
                     'query' => '',
@@ -178,7 +171,11 @@ class SubscriptionManager
                 );
 
             case MessageTypes::GQL_STOP:
-                return null;
+                $deleted = isset($data['id']) ? $this->subscribeStorage->delete($data['id']) : false;
+
+                return [
+                    'type' => $deleted ? MessageTypes::GQL_SUCCESS : MessageTypes::GQL_ERROR,
+                ];
 
             default:
                 throw new \InvalidArgumentException(\sprintf(
@@ -298,13 +295,12 @@ class SubscriptionManager
                 $subscriber->getTopic(),
                 \json_encode([
                     'type' => MessageTypes::GQL_DATA,
+                    'id' => $subscriber->getId(),
                     'payload' => $result,
-                    'extensions' => [
-                        'id' => $subscriber->getId(),
-                        'topic' => $subscriber->getTopic(),
-                    ],
+                    'topic' => $subscriber->getTopic(),
                 ]),
-                [$subscriber->getTopic()]
+                [$subscriber->getTopic()],
+                \sprintf('event-%s', $subscriber->getId())
             );
             ($this->publisher)($update);
         }
