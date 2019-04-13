@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLSubscription;
 
 use GraphQL\GraphQL;
+use GraphQL\Type\Schema;
 use Overblog\GraphQLSubscription\Provider\JwtPublishProvider;
 use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
@@ -57,6 +58,9 @@ class Builder
 
     /** @var callable|null */
     private $schemaBuilder = null;
+
+    /** @var Schema|null */
+    private $schema = null;
 
     public function setHubUrl(string $hubUrl): self
     {
@@ -156,6 +160,13 @@ class Builder
         return $this;
     }
 
+    public function setSchema(?Schema $schema): self
+    {
+        $this->schema = $schema;
+
+        return $this;
+    }
+
     public function getSubscriptionManager(): SubscriptionManager
     {
         $publisher = $this->publisher;
@@ -170,6 +181,13 @@ class Builder
             $this->subscribeStoragePath ?? \sys_get_temp_dir().'/graphql-subscriptions'
             );
         $subscriberProvider = $this->subscriberProvider ?? new JwtSubscribeProvider($this->subscriberSecretKey);
+        $schemaBuilder = $this->schemaBuilder;
+        if (null === $schemaBuilder && null !== $this->schema) {
+            $schema = $this->schema;
+            $schemaBuilder = static function () use ($schema): Schema {
+                return $schema;
+            };
+        }
 
         return new SubscriptionManager(
             $publisher,
@@ -178,7 +196,7 @@ class Builder
             $this->topicUrlPattern,
             $subscriberProvider,
             $this->logger,
-            $this->schemaBuilder
+            $schemaBuilder
         );
     }
 }
