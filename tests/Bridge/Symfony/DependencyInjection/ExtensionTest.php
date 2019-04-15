@@ -52,7 +52,7 @@ class ExtensionTest extends TestCase
         $config[] = ['graphql_executor' => 'graphql_executor_handler::execute'];
         $container = $this->load($config);
         $this->assertDefinition($container, SubscriptionManager::class);
-        $executor = $container->getDefinition(SubscriptionManager::class)->getArgument(2);
+        $executor = $container->getDefinition(SubscriptionManager::class)->getArgument(3);
         $this->assertInstanceOf(Reference::class, $executor[0]);
         $this->assertSame('graphql_executor_handler', (string) $executor[0]);
         $this->assertSame('execute', $executor[1]);

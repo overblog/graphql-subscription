@@ -53,6 +53,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
 
         $container->register(SubscriptionManager::class)
             ->setArguments([
+                $config['mercure_hub']['url'],
                 new Reference($this->getAlias().'.publisher'),
                 new Reference(SubscribeStorageInterface::class),
                 $this->resolveCallableServiceReference($config['graphql_executor']),
