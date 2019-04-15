@@ -312,8 +312,7 @@ class SubscriptionManager
                     'id' => $subscriber->getId(),
                     'payload' => $result,
                 ]),
-                [$subscriber->getTopic()],
-                \sprintf('event-%s', $subscriber->getId())
+                [$subscriber->getTopic()]
             );
             ($this->publisher)($update);
         }

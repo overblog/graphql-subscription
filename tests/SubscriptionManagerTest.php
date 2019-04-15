@@ -27,7 +27,6 @@ class SubscriptionManagerTest extends TestCase
             'topic' => 'https://graphql.org/subscriptions/myID',
             'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"hello word!"}}}}',
             'target' => 'https://graphql.org/subscriptions/myID',
-            'id' => 'event-myID',
         ]);
         $subscriptionManager = $this->createSubscriptionManager($publisher, $executor);
         $executor
@@ -97,7 +96,6 @@ class SubscriptionManagerTest extends TestCase
             'topic' => 'https://graphql.org/subscriptions/myID',
             'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"Hi!"}}}}',
             'target' => 'https://graphql.org/subscriptions/myID',
-            'id' => 'event-myID',
         ]);
         $subscriptionManager = $this->createSubscriptionManager($publisher, $executor);
         $executor
