@@ -62,10 +62,10 @@ Symfony Flex generates:
     overblog_graphql_subscription:
         topic_url_pattern: "http://localhost:8000/subscriptions/{channel}/{id}.json"
         mercure_hub:
+            url: "https://mercure.roks/hub"
     #       Will use the mercure bundle default publisher
             handler_id: ~
     #       Uncomment to use without mercure bundle
-    #        url: "https://mercure.roks/hub"
     #        publish:
     #            secret_key: "!mySuperPublisherSecretKey!"
             subscribe:

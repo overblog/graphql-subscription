@@ -22,6 +22,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
  */
 class SubscriptionManager
 {
+    private $hubUrl;
+
     private $publisher;
 
     /** @var MessageBusInterface */
@@ -44,6 +46,7 @@ class SubscriptionManager
     private $schemaBuilder;
 
     /**
+     * @param string                    $hubUrl
      * @param Publisher|callable        $publisher
      * @param SubscribeStorageInterface $subscribeStorage
      * @param callable                  $executor             should return the result payload
@@ -53,6 +56,7 @@ class SubscriptionManager
      * @param callable|null             $schemaBuilder
      */
     public function __construct(
+        string $hubUrl,
         callable $publisher,
         SubscribeStorageInterface $subscribeStorage,
         callable $executor,
@@ -61,6 +65,7 @@ class SubscriptionManager
         ?LoggerInterface $logger = null,
         ?callable $schemaBuilder = null
     ) {
+        $this->hubUrl = $hubUrl;
         $this->publisher = $publisher;
         $this->executorHandler = $executor;
         $this->subscribeStorage = $subscribeStorage;
@@ -203,6 +208,7 @@ class SubscriptionManager
             $channel = self::extractSubscriptionChannel($operationDef);
             $id = $this->generateId();
             $topic = $this->buildTopicUrl($id, $channel, $schemaName);
+            $hubUrl = $this->buildHubUrl($topic);
 
             $this->getSubscribeStorage()->store(new Subscriber(
                 $id,
@@ -219,6 +225,7 @@ class SubscriptionManager
                 'type' => MessageTypes::GQL_DATA,
                 'id' => $id,
                 'topic' => $topic,
+                'hubUrl' => $hubUrl,
                 'accessToken' => ($this->jwtSubscribeProvider)($topic),
                 'payload' => $result,
             ];
@@ -253,6 +260,13 @@ class SubscriptionManager
             [$id, $channel, $schemaName],
             $this->topicUrlPattern
         );
+    }
+
+    private function buildHubUrl(string $topic): string
+    {
+        $querySeparator = empty(\parse_url($this->hubUrl)['query']) ? '?' : '&';
+
+        return \sprintf('%s%stopic=%s', $this->hubUrl, $querySeparator, \urlencode($topic));
     }
 
     private function executeQuery(
@@ -297,7 +311,6 @@ class SubscriptionManager
                     'type' => MessageTypes::GQL_DATA,
                     'id' => $subscriber->getId(),
                     'payload' => $result,
-                    'topic' => $subscriber->getTopic(),
                 ]),
                 [$subscriber->getTopic()],
                 \sprintf('event-%s', $subscriber->getId())

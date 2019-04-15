@@ -77,6 +77,7 @@ class Configuration implements ConfigurationInterface
                     ->example('mercure.hub.default.publisher')
                 ->end()
                 ->scalarNode('url')
+                    ->isRequired()
                     ->info('URL of mercure hub endpoint.')
                     ->example('https://demo.mercure.rocks/hub')
                 ->end()

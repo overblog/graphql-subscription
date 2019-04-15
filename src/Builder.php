@@ -190,6 +190,7 @@ class Builder
         }
 
         return new SubscriptionManager(
+            $this->hubUrl,
             $publisher,
             $subscribeStorage,
             $this->executorHandler ?? [GraphQL::class, 'executeQuery'],

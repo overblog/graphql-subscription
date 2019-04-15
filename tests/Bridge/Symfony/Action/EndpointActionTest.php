@@ -22,6 +22,8 @@ class EndpointActionTest extends TestCase
 {
     public const SECRET_SUBSCRIBER_KEY = 'verySecretKey';
 
+    private const HUB_URL = 'http://hub.example.com';
+
     private const SUBSCRIPTION_QUERY = <<<'GQL'
 subscription {
   inbox(roomName: "foo") {
@@ -167,6 +169,7 @@ GQL;
     private function getSubscriptionManager(SubscribeStorageInterface $storage, callable $executor): SubscriptionManager
     {
         return new SubscriptionManager(
+            self::HUB_URL,
             function (): void {
                 $this->fail('Publisher should never be execute in create action');
             },

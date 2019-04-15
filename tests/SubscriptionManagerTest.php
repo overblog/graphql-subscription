@@ -17,7 +17,7 @@ use Symfony\Component\Messenger\MessageBus;
 
 class SubscriptionManagerTest extends TestCase
 {
-    public const URL = 'https://example.test/hub';
+    public const HUB_URL = 'https://example.test/hub';
     public const JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.OPker5jU6ePTLigtCI8WbYgOpfNvI-dClddsjsiFXh4';
 
     public function testNotifyWithoutBus(): void
@@ -25,7 +25,7 @@ class SubscriptionManagerTest extends TestCase
         $executor = $this->createCallableMock();
         $publisher = $this->createPublisher([
             'topic' => 'https://graphql.org/subscriptions/myID',
-            'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"hello word!"}}},"topic":"https:\/\/graphql.org\/subscriptions\/myID"}',
+            'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"hello word!"}}}}',
             'target' => 'https://graphql.org/subscriptions/myID',
             'id' => 'event-myID',
         ]);
@@ -95,7 +95,7 @@ class SubscriptionManagerTest extends TestCase
         $executor = $this->createCallableMock();
         $publisher = $this->createPublisher([
             'topic' => 'https://graphql.org/subscriptions/myID',
-            'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"Hi!"}}},"topic":"https:\/\/graphql.org\/subscriptions\/myID"}',
+            'data' => '{"type":"data","id":"myID","payload":{"data":{"inbox":{"message":"Hi!"}}}}',
             'target' => 'https://graphql.org/subscriptions/myID',
             'id' => 'event-myID',
         ]);
@@ -116,7 +116,9 @@ class SubscriptionManagerTest extends TestCase
 
     private function createSubscriptionManager(callable $publisher, $executor, ?array $storage = null): SubscriptionManager
     {
-        return new SubscriptionManager($publisher,
+        return new SubscriptionManager(
+            self::HUB_URL,
+            $publisher,
             new MemorySubscriptionStorage($storage ?? [
                     new Subscriber(
                         'myID',
@@ -138,7 +140,7 @@ class SubscriptionManagerTest extends TestCase
         return $this->createPartialMock(\stdClass::class, ['__invoke']);
     }
 
-    private function createPublisher(array $expectedPostData = [], callable $httpClient = null, ?callable $jwtProvider = null, ?string $hubUrl = self::URL): Publisher
+    private function createPublisher(array $expectedPostData = [], callable $httpClient = null, ?callable $jwtProvider = null, ?string $hubUrl = self::HUB_URL): Publisher
     {
         return new Publisher(
             $hubUrl,
