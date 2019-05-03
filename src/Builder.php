@@ -17,8 +17,11 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 class Builder
 {
-    /** @var string */
-    private $hubUrl;
+    /** @var string|null */
+    private $hubUrl = null;
+
+    /** @var string|null */
+    private $publicHubUrl = null;
 
     /** @var string */
     private $topicUrlPattern;
@@ -62,9 +65,16 @@ class Builder
     /** @var Schema|null */
     private $schema = null;
 
-    public function setHubUrl(string $hubUrl): self
+    public function setHubUrl(?string $hubUrl): self
     {
         $this->hubUrl = $hubUrl;
+
+        return $this;
+    }
+
+    public function setPublicHubUrl(?string $publicHubUrl): self
+    {
+        $this->publicHubUrl = $publicHubUrl;
 
         return $this;
     }
@@ -190,14 +200,14 @@ class Builder
         }
 
         return new SubscriptionManager(
-            $this->hubUrl,
             $publisher,
             $subscribeStorage,
             $this->executorHandler ?? [GraphQL::class, 'executeQuery'],
             $this->topicUrlPattern,
             $subscriberProvider,
             $this->logger,
-            $schemaBuilder
+            $schemaBuilder,
+            $this->publicHubUrl
         );
     }
 }

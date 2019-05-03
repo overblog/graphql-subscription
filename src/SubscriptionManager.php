@@ -22,7 +22,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
  */
 class SubscriptionManager
 {
-    private $hubUrl;
+    private $publicHubUrl;
 
     private $publisher;
 
@@ -46,7 +46,6 @@ class SubscriptionManager
     private $schemaBuilder;
 
     /**
-     * @param string                    $hubUrl
      * @param Publisher|callable        $publisher
      * @param SubscribeStorageInterface $subscribeStorage
      * @param callable                  $executor             should return the result payload
@@ -54,18 +53,18 @@ class SubscriptionManager
      * @param callable                  $jwtSubscribeProvider
      * @param LoggerInterface|null      $logger
      * @param callable|null             $schemaBuilder
+     * @param string|null               $publicHubUrl
      */
     public function __construct(
-        string $hubUrl,
         callable $publisher,
         SubscribeStorageInterface $subscribeStorage,
         callable $executor,
         string $topicUrlPattern,
         callable $jwtSubscribeProvider,
         ?LoggerInterface $logger = null,
-        ?callable $schemaBuilder = null
+        ?callable $schemaBuilder = null,
+        ?string $publicHubUrl = null
     ) {
-        $this->hubUrl = $hubUrl;
         $this->publisher = $publisher;
         $this->executorHandler = $executor;
         $this->subscribeStorage = $subscribeStorage;
@@ -74,6 +73,7 @@ class SubscriptionManager
         $this->jwtSubscribeProvider = $jwtSubscribeProvider;
         $this->logger = $logger ?? new NullLogger();
         $this->schemaBuilder = $schemaBuilder;
+        $this->publicHubUrl = $publicHubUrl;
     }
 
     public function validateTopicUrlPattern(string $topicUrlPattern): void
@@ -208,7 +208,6 @@ class SubscriptionManager
             $channel = self::extractSubscriptionChannel($operationDef);
             $id = $this->generateId();
             $topic = $this->buildTopicUrl($id, $channel, $schemaName);
-            $hubUrl = $this->buildHubUrl($topic);
 
             $this->getSubscribeStorage()->store(new Subscriber(
                 $id,
@@ -225,7 +224,7 @@ class SubscriptionManager
                 'type' => MessageTypes::GQL_DATA,
                 'id' => $id,
                 'topic' => $topic,
-                'hubUrl' => $hubUrl,
+                'hubUrl' => $this->buildHubUrl($topic),
                 'accessToken' => ($this->jwtSubscribeProvider)($topic),
                 'payload' => $result,
             ];
@@ -262,11 +261,15 @@ class SubscriptionManager
         );
     }
 
-    private function buildHubUrl(string $topic): string
+    private function buildHubUrl(string $topic): ?string
     {
-        $querySeparator = empty(\parse_url($this->hubUrl)['query']) ? '?' : '&';
+        if (null === $this->publicHubUrl) {
+            return null;
+        }
 
-        return \sprintf('%s%stopic=%s', $this->hubUrl, $querySeparator, \urlencode($topic));
+        $querySeparator = empty(\parse_url($this->publicHubUrl)['query']) ? '?' : '&';
+
+        return \sprintf('%s%stopic=%s', $this->publicHubUrl, $querySeparator, \urlencode($topic));
     }
 
     private function executeQuery(

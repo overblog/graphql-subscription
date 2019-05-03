@@ -53,7 +53,6 @@ class Extension extends BaseExtension implements PrependExtensionInterface
 
         $container->register(SubscriptionManager::class)
             ->setArguments([
-                $config['mercure_hub']['url'],
                 new Reference($this->getAlias().'.publisher'),
                 new Reference(SubscribeStorageInterface::class),
                 $this->resolveCallableServiceReference($config['graphql_executor']),
@@ -61,6 +60,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
                 new Reference($this->getAlias().'.jwt_subscribe_provider'),
                 new Reference('logger', ContainerInterface::IGNORE_ON_INVALID_REFERENCE),
                 $this->resolveCallableServiceReference($config['schema_builder']),
+                $config['mercure_hub']['public_url'] ?? null,
             ])
             ->addMethodCall(
                 'setBus',

@@ -115,22 +115,23 @@ class SubscriptionManagerTest extends TestCase
     private function createSubscriptionManager(callable $publisher, $executor, ?array $storage = null): SubscriptionManager
     {
         return new SubscriptionManager(
-            self::HUB_URL,
             $publisher,
             new MemorySubscriptionStorage($storage ?? [
-                    new Subscriber(
-                        'myID',
-                        'https://graphql.org/subscriptions/myID',
-                        'subscription { inbox { message } }',
-                        'inbox',
-                        null,
-                        null,
-                        null
-                    ),
-                ]),
+                new Subscriber(
+                    'myID',
+                    'https://graphql.org/subscriptions/myID',
+                    'subscription { inbox { message } }',
+                    'inbox',
+                    null,
+                    null,
+                    null
+                ),
+            ]),
             $executor,
             'https://graphql.org/subscriptions/{id}',
-            function (): void {});
+            function (): void {
+            }
+        );
     }
 
     private function createCallableMock()
