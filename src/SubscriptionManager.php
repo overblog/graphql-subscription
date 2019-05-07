@@ -220,19 +220,16 @@ class SubscriptionManager
                 $extra
             ));
 
-            return [
-                'type' => MessageTypes::GQL_DATA,
+            $result['extensions']['__sse'] = [
                 'id' => $id,
                 'topic' => $topic,
                 'hubUrl' => $this->buildHubUrl($topic),
                 'accessToken' => ($this->jwtSubscribeProvider)($topic),
-                'payload' => $result,
             ];
+
+            return $result;
         } else {
-            return [
-                'type' => MessageTypes::GQL_ERROR,
-                'payload' => $result,
-            ];
+            return $result;
         }
     }
 

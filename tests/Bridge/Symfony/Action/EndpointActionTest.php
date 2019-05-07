@@ -42,12 +42,13 @@ GQL;
     {
         [$response, $storage] = $this->processResponse($expectedPayload = ['data' => ['inbox' => null]], $expectedSchemaName);
         $result = $response->getContent();
-        $actual = \json_decode($result, true);
-        $this->assertRegExp('@^https://graphql.org/subscriptions/[a-zA-Z0-9]{12}@', $actual['topic']);
-        $actualParseToken = (new Parser())->parse($actual['accessToken']);
-        $this->assertSame(['subscribe' => [$actual['topic']]], (array) $actualParseToken->getClaim('mercure'));
+        $payload = \json_decode($result, true);
+        $sseData = $payload['extensions']['__sse'];
+        $this->assertRegExp('@^https://graphql.org/subscriptions/[a-zA-Z0-9]{12}@', $sseData['topic']);
+        $actualParseToken = (new Parser())->parse($sseData['accessToken']);
+        $this->assertSame(['subscribe' => [$sseData['topic']]], (array) $actualParseToken->getClaim('mercure'));
         $this->assertTrue($actualParseToken->verify(new Sha256(), self::SECRET_SUBSCRIBER_KEY));
-        $this->assertSame($expectedPayload, $actual['payload'], $result);
+        $this->assertSame($expectedPayload['data'], $payload['data'], $result);
         $this->assertCount(1, $storage->findSubscribersByChannelAndSchemaName('inbox', $expectedSchemaName));
         $this->assertInstanceOf(Subscriber::class, $storage->findSubscribersByChannelAndSchemaName('inbox', $expectedSchemaName)->current());
     }
@@ -80,7 +81,7 @@ GQL;
      */
     public function testCreateActionFailed(?string $expectedSchemaName): void
     {
-        $graphqlPayload = [
+        $expectedPayload = [
             'errors' => [
                 [
                     'message' => 'Cannot query field "fake" on type "Subscription".',
@@ -91,15 +92,11 @@ GQL;
         ];
 
         [$response, $storage] = $this->processResponse(
-            $graphqlPayload, $expectedSchemaName, 'subscription { fake }'
+            $expectedPayload, $expectedSchemaName, 'subscription { fake }'
         );
 
         $result = $response->getContent();
         $actual = \json_decode($result, true);
-        $expectedPayload = [
-            'type' => 'error',
-            'payload' => $graphqlPayload,
-        ];
         $this->assertSame($expectedPayload, $actual);
         $this->assertCount(0, $storage->findSubscribersByChannelAndSchemaName('inbox', $expectedSchemaName));
     }
