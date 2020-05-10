@@ -18,13 +18,14 @@
         "php": ">=7.1",
         "ext-json": "*",
         "psr/log": "^1.0",
-        "symfony/mercure": ">=0.1.0",
+        "symfony/mercure": ">=0.2.0",
         "webonyx/graphql-php": "*"
     },
     "require-dev": {
         "lcobucci/jwt": "^3.2",
         "symfony/framework-bundle": "^3.4 || ^4.0",
         "symfony/messenger": "^4.0",
+        "symfony/yaml": "^3.4 || ^4.0",
         "phpunit/phpunit": "^7.2"
     },
     "autoload": {
