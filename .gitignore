@@ -3,5 +3,7 @@
 /composer.lock
 /composer.phar
 /phpunit.xml
-/.php_cs
-/.php_cs.cache
+/phpstan.neon
+.php_cs.cache
+.php_cs
+.phpunit.result.cache

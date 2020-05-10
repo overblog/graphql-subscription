@@ -16,10 +16,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBus;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
-use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 class SubscriptionManagerTest extends TestCase
 {

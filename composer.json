@@ -23,6 +23,10 @@
     },
     "require-dev": {
         "lcobucci/jwt": "^3.2",
+        "phpstan/extension-installer": "^1.0",
+        "phpstan/phpstan-shim": "^0.11.19",
+        "phpstan/phpstan-phpunit": "^0.11",
+        "phpstan/phpstan-symfony": "^0.11",
         "symfony/framework-bundle": "^3.4 || ^4.0",
         "symfony/messenger": "^4.0",
         "symfony/yaml": "^3.4 || ^4.0",
@@ -37,6 +41,27 @@
         "psr-4": {
             "Overblog\\GraphQLSubscription\\Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "test": "bin/phpunit --color=always -v --debug",
+        "static-analysis": [
+            "phpstan analyse --ansi --memory-limit=1G"
+        ],
+        "install-cs": "test -f bin/php-cs-fixer.phar || wget https://github.com/FriendsOfPHP/PHP-CS-Fixer/releases/download/v2.15.3/php-cs-fixer.phar -O bin/php-cs-fixer.phar",
+        "fix-cs": [
+            "@install-cs",
+            "@php bin/php-cs-fixer.phar fix --diff -v --allow-risky=yes --ansi"
+        ],
+        "check-cs": [
+            "@install-cs",
+            "@php bin/php-cs-fixer.phar fix --dry-run --diff -v --allow-risky=yes --ansi"
+        ],
+        "code-quality": [
+            "rm composer.lock",
+            "@composer install --ansi",
+            "@static-analysis",
+            "@check-cs"
+        ]
     },
     "suggest": {
         "nelmio/cors-bundle": "To manage CORS prefight"
