@@ -10,16 +10,13 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
 {
     private $directory;
 
-    private $compress;
-
     public function __construct(string $directory, int $mask = 0777)
     {
-        if (!\file_exists($directory)) {
-            @\mkdir($directory, $mask, true);
+        if (!\is_dir($directory)) {
+            \mkdir($directory, $mask, true);
         }
 
         $this->directory = $directory;
-        $this->compress = \function_exists('gzcompress');
     }
 
     /**
@@ -53,7 +50,7 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
             $schemaName ? '@'.$schemaName : ''
         );
 
-        foreach (\glob($pattern) as $filename) {
+        foreach (\glob($pattern) ?: [] as $filename) {
             try {
                 yield $this->unserialize(\file_get_contents($filename));
             } catch (\Throwable $e) {
@@ -85,8 +82,9 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
             $this->directory,
             $subscriberID
         );
+        $files = \glob($pattern);
 
-        return \glob($pattern)[0] ?? null;
+        return empty($files) ? null : $files[0];
     }
 
     private function write(string $file, Subscriber $subscriber): bool
@@ -96,11 +94,11 @@ final class FilesystemSubscribeStorage implements SubscribeStorageInterface
 
     private function serialize(Subscriber $subscriber): string
     {
-        return $this->compress ? \gzcompress(\serialize($subscriber), 9) : \serialize($subscriber);
+        return \serialize($subscriber);
     }
 
     private function unserialize($str): Subscriber
     {
-        return $this->compress ? \unserialize(\gzuncompress($str)) : \unserialize($str);
+        return \unserialize($str);
     }
 }

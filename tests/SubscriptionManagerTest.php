@@ -11,9 +11,13 @@ use Overblog\GraphQLSubscription\Storage\MemorySubscriptionStorage;
 use Overblog\GraphQLSubscription\SubscriptionManager;
 use Overblog\GraphQLSubscription\Update;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBus;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class SubscriptionManagerTest extends TestCase
 {
@@ -32,7 +36,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, RootValue $rootValue) {
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;
@@ -43,7 +47,8 @@ class SubscriptionManagerTest extends TestCase
     public function testEventStopPropagation(): void
     {
         $executor = $this->createCallableMock();
-        $httpClient = $this->createCallableMock();
+        $responseFactory = $this->createCallableMock();
+        $httpClient = new MockHttpClient($responseFactory);
         $subscriptionManager = $this->createSubscriptionManager(
             $this->createPublisher([], $httpClient),
             $executor
@@ -51,13 +56,13 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, RootValue $rootValue) {
                 $rootValue->stopPropagation();
 
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;
-        $httpClient
+        $responseFactory
             ->expects($this->never())
             ->method('__invoke');
         $subscriptionManager->notify('inbox', []);
@@ -101,7 +106,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, RootValue $rootValue) {
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;
@@ -139,19 +144,19 @@ class SubscriptionManagerTest extends TestCase
         return $this->createPartialMock(\stdClass::class, ['__invoke']);
     }
 
-    private function createPublisher(array $expectedPostData = [], callable $httpClient = null, ?callable $jwtProvider = null, ?string $hubUrl = self::HUB_URL): Publisher
+    private function createPublisher(array $expectedPostData = [], HttpClientInterface $httpClient = null, ?callable $jwtProvider = null, string $hubUrl = self::HUB_URL): Publisher
     {
         return new Publisher(
             $hubUrl,
             $jwtProvider ?? function (): string {
                 return self::JWT;
             },
-            $httpClient ?? function (string $url, string $jwt, string $postData) use ($expectedPostData): string {
-                \parse_str($postData, $actualPostData);
+            $httpClient ?? new MockHttpClient(function (string $method, string $url, array $options) use ($expectedPostData): ResponseInterface {
+                \parse_str($options['body'], $actualPostData);
                 $this->assertSame($expectedPostData, $actualPostData);
 
-                return 'myID';
-            }
+                return new MockResponse('myID');
+            })
         );
     }
 }

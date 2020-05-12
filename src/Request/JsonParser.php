@@ -6,8 +6,11 @@ namespace Overblog\GraphQLSubscription\Request;
 
 final class JsonParser
 {
-    public function __invoke(string $contentType, ?string $requestBody): array
+    public function __invoke(?string $contentType, string $requestBody): array
     {
+        if (null === $contentType) {
+            throw $this->createInvalidMessageException($contentType);
+        }
         if (false !== \strpos($contentType, ';')) {
             $contentType = \explode(';', (string) $contentType, 2)[0];
         }
@@ -16,9 +19,9 @@ final class JsonParser
             $input = \json_decode($requestBody, true);
             if (JSON_ERROR_NONE !== \json_last_error()) {
                 throw new \RuntimeException(\sprintf(
-                   'Could not decode request body %s cause %s',
-                   \json_encode($requestBody),
-                   \json_encode(\json_last_error_msg())
+                    'Could not decode request body %s cause %s',
+                    \json_encode($requestBody),
+                    \json_encode(\json_last_error_msg())
                 ));
             }
 
@@ -28,10 +31,15 @@ final class JsonParser
 
             return [$type, $id, $payload];
         } else {
-            throw new \RuntimeException(\sprintf(
-                'Only "application/json" content-type is managed by parser but got %s.',
-                \json_encode($contentType)
-            ));
+            throw $this->createInvalidMessageException($contentType);
         }
+    }
+
+    private function createInvalidMessageException(?string $contentType): \RuntimeException
+    {
+        return new \RuntimeException(\sprintf(
+            'Only "application/json" content-type is managed by parser but got %s.',
+            \json_encode($contentType)
+        ));
     }
 }
