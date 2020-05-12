@@ -23,7 +23,7 @@ interface SubscribeStorageInterface
      * @param string $channel
      * @param string $schemaName
      *
-     * @return Subscriber[]|iterable|\Generator
+     * @return Subscriber[]|\Generator
      */
     public function findSubscribersByChannelAndSchemaName(string $channel, ?string $schemaName): iterable;
 

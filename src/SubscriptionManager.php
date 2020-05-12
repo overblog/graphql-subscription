@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription;
 
-use GraphQL\Error\SyntaxError;
 use GraphQL\Executor\ExecutionResult;
 use GraphQL\Language\AST\DocumentNode;
+use GraphQL\Language\AST\FieldNode;
 use GraphQL\Language\AST\OperationDefinitionNode;
 use GraphQL\Language\Parser;
 use Overblog\GraphQLSubscription\Entity\Subscriber;
@@ -26,7 +26,7 @@ class SubscriptionManager
 
     private $publisher;
 
-    /** @var MessageBusInterface */
+    /** @var MessageBusInterface|null */
     private $bus;
 
     private $subscribeStorage;
@@ -36,8 +36,6 @@ class SubscriptionManager
     private $topicUrlPattern;
 
     private $jwtSubscribeProvider;
-
-    private $viaBus = false;
 
     private $notificationsSpool = [];
 
@@ -105,7 +103,6 @@ class SubscriptionManager
 
     public function setBus(?MessageBusInterface $bus): self
     {
-        $this->viaBus = null !== $bus;
         $this->bus = $bus;
 
         return $this;
@@ -114,7 +111,7 @@ class SubscriptionManager
     public function notify(string $channel, $payload, string $schemaName = null): void
     {
         $data = ['payload' => $payload, 'schemaName' => $schemaName, 'channel' => $channel];
-        if ($this->viaBus) {
+        if (null !== $this->bus) {
             $update = new Update(\serialize($data));
             $this->bus->dispatch($update);
         } else {
@@ -264,9 +261,12 @@ class SubscriptionManager
             return null;
         }
 
-        $querySeparator = empty(\parse_url($this->publicHubUrl)['query']) ? '?' : '&';
-
-        return \sprintf('%s%stopic=%s', $this->publicHubUrl, $querySeparator, \urlencode($topic));
+        return \sprintf(
+            '%s%stopic=%s',
+            $this->publicHubUrl,
+            false === \strpos($this->publicHubUrl, '?') ? '?' : '&',
+            \urlencode($topic)
+        );
     }
 
     private function executeQuery(
@@ -305,14 +305,17 @@ class SubscriptionManager
         );
 
         if (!$rootValue->isPropagationStopped()) {
+            $data = \json_encode([
+                'type' => MessageTypes::GQL_DATA,
+                'id' => $subscriber->getId(),
+                'payload' => $result,
+            ]);
+            if (false === $data) {
+                throw new \RuntimeException(\sprintf('Failed to json encode result (%s).', \json_last_error_msg()));
+            }
+
             $update = new MercureUpdate(
-                $subscriber->getTopic(),
-                \json_encode([
-                    'type' => MessageTypes::GQL_DATA,
-                    'id' => $subscriber->getId(),
-                    'payload' => $result,
-                ]),
-                [$subscriber->getTopic()]
+                $subscriber->getTopic(), $data, [$subscriber->getTopic()]
             );
             ($this->publisher)($update);
         }
@@ -320,41 +323,40 @@ class SubscriptionManager
 
     private static function parseQuery(string $query): DocumentNode
     {
-        try {
-            $document = Parser::parse($query);
-        } catch (SyntaxError $e) {
-            throw new \InvalidArgumentException($e->getMessage(), $e);
-        }
-
-        return $document;
+        return Parser::parse($query);
     }
 
     private function extractSubscriptionChannel(OperationDefinitionNode $operationDefinitionNode): string
     {
-        $selectionNodes = $operationDefinitionNode
+        /** @var FieldNode[] $selections */
+        $selections = $operationDefinitionNode
             ->selectionSet
             ->selections;
 
-        if (\count($selectionNodes) > 1) {
-            throw new \InvalidArgumentException(\sprintf('Subscription operations must have exactly one root field.'));
+        if (1 !== \count($selections)) {
+            if (null === $operationDefinitionNode->name->value) {
+                $message = \sprintf('Anonymous Subscription operations must select only one top level field.');
+            } else {
+                $message = \sprintf('Subscription "%s" must select only one top level field.', $operationDefinitionNode->name->value);
+            }
+
+            throw new \InvalidArgumentException($message);
         }
 
-        return $selectionNodes[0]->name->value;
+        return $selections[0]->name->value;
     }
 
     private static function extractOperationDefinition(DocumentNode $document, $operationName = null): OperationDefinitionNode
     {
         $operationNode = null;
 
-        if ($document->definitions) {
-            foreach ($document->definitions as $def) {
-                if (!$def instanceof OperationDefinitionNode) {
-                    continue;
-                }
+        foreach ($document->definitions as $def) {
+            if (!$def instanceof OperationDefinitionNode) {
+                continue;
+            }
 
-                if (!$operationName || (isset($def->name->value) && $def->name->value === $operationName)) {
-                    $operationNode = $def;
-                }
+            if (!$operationName || (isset($def->name->value) && $def->name->value === $operationName)) {
+                $operationNode = $def;
             }
         }
 

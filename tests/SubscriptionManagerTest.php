@@ -36,7 +36,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, RootValue $rootValue) {
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;
@@ -56,7 +56,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, RootValue $rootValue) {
                 $rootValue->stopPropagation();
 
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
@@ -106,7 +106,7 @@ class SubscriptionManagerTest extends TestCase
         $executor
             ->expects($this->once())
             ->method('__invoke')
-            ->willReturnCallback(function (?string $schemaName, $source, ?RootValue $rootValue) {
+            ->willReturnCallback(function (?string $schemaName, $source, RootValue $rootValue) {
                 return new ExecutionResult(['inbox' => $rootValue->getPayload()]);
             })
         ;
@@ -144,7 +144,7 @@ class SubscriptionManagerTest extends TestCase
         return $this->createPartialMock(\stdClass::class, ['__invoke']);
     }
 
-    private function createPublisher(array $expectedPostData = [], HttpClientInterface $httpClient = null, ?callable $jwtProvider = null, ?string $hubUrl = self::HUB_URL): Publisher
+    private function createPublisher(array $expectedPostData = [], HttpClientInterface $httpClient = null, ?callable $jwtProvider = null, string $hubUrl = self::HUB_URL): Publisher
     {
         return new Publisher(
             $hubUrl,

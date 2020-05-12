@@ -12,13 +12,12 @@ use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mercure\Publisher;
-use Symfony\Component\Mercure\Publisher as MercurePublisher;
-use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Builder
 {
-    /** @var string|null */
-    private $hubUrl = null;
+    /** @var string */
+    private $hubUrl;
 
     /** @var string|null */
     private $publicHubUrl = null;
@@ -32,23 +31,20 @@ class Builder
     /** @var Publisher|null */
     private $publisher;
 
-    /** @var callable|null */
+    /** @var HttpClientInterface|null */
     private $publisherHttpClient = null;
 
     /** @var callable|null */
     private $publisherProvider = null;
 
-    /** @var string|null */
-    private $publisherSecretKey = null;
+    /** @var string */
+    private $publisherSecretKey;
 
     /** @var callable|null */
     private $subscriberProvider = null;
 
-    /** @var string|null */
-    private $subscriberSecretKey = null;
-
-    /** @var MessageBusInterface|null */
-    private $messengerBus = null;
+    /** @var string */
+    private $subscriberSecretKey;
 
     /** @var SubscribeStorageInterface|null */
     private $subscribeStorage = null;
@@ -65,7 +61,7 @@ class Builder
     /** @var Schema|null */
     private $schema = null;
 
-    public function setHubUrl(?string $hubUrl): self
+    public function setHubUrl(string $hubUrl): self
     {
         $this->hubUrl = $hubUrl;
 
@@ -100,7 +96,7 @@ class Builder
         return $this;
     }
 
-    public function setPublisherHttpClient(?callable $publisherHttpClient): self
+    public function setPublisherHttpClient(?HttpClientInterface $publisherHttpClient): self
     {
         $this->publisherHttpClient = $publisherHttpClient;
 
@@ -114,7 +110,7 @@ class Builder
         return $this;
     }
 
-    public function setPublisherSecretKey(?string $publisherSecretKey): self
+    public function setPublisherSecretKey(string $publisherSecretKey): self
     {
         $this->publisherSecretKey = $publisherSecretKey;
 
@@ -128,16 +124,9 @@ class Builder
         return $this;
     }
 
-    public function setSubscriberSecretKey(?string $subscriberSecretKey): self
+    public function setSubscriberSecretKey(string $subscriberSecretKey): self
     {
         $this->subscriberSecretKey = $subscriberSecretKey;
-
-        return $this;
-    }
-
-    public function setMessengerBus(?MessageBusInterface $messengerBus): self
-    {
-        $this->messengerBus = $messengerBus;
 
         return $this;
     }
@@ -181,7 +170,7 @@ class Builder
     {
         $publisher = $this->publisher;
         if (null === $publisher) {
-            $publisher = new MercurePublisher(
+            $publisher = new Publisher(
                 $this->hubUrl,
                 $this->publisherProvider ?? new JwtPublishProvider($this->publisherSecretKey),
                 $this->publisherHttpClient

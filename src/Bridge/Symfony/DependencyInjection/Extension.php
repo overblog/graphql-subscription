@@ -11,6 +11,7 @@ use Overblog\GraphQLSubscription\Provider\JwtSubscribeProvider;
 use Overblog\GraphQLSubscription\Storage\FilesystemSubscribeStorage;
 use Overblog\GraphQLSubscription\Storage\SubscribeStorageInterface;
 use Overblog\GraphQLSubscription\SubscriptionManager;
+use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -119,7 +120,9 @@ class Extension extends BaseExtension implements PrependExtensionInterface
                 ->setArguments([
                     $config['mercure_hub']['url'],
                     new Reference('overblog_graphql_subscription.jwt_publish_provider'),
-                    $this->resolveCallableServiceReference($config['mercure_hub']['http_client']),
+                    null === $config['mercure_hub']['http_client'] ?
+                        new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE) :
+                        new Reference($config['mercure_hub']['http_client']),
                 ]);
         }
     }
@@ -142,7 +145,7 @@ class Extension extends BaseExtension implements PrependExtensionInterface
         return Configuration::NAME;
     }
 
-    public function getConfiguration(array $config, ContainerBuilder $container)
+    public function getConfiguration(array $config, ContainerBuilder $container): ConfigurationInterface
     {
         return new Configuration($container->getParameter('kernel.project_dir').'/var');
     }

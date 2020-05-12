@@ -4,26 +4,51 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+// TODO(mcg-web): remove hack after migrating Symfony >= 4.3
+use Symfony\Contracts\EventDispatcher\Event;
 
-final class SubscriptionExtraEvent extends Event
-{
-    /** @var \ArrayObject */
-    private $extra;
-
-    /**
-     * @param \ArrayObject $extra
-     */
-    public function __construct(\ArrayObject $extra)
+if (EventDispatcherVersionHelper::isForLegacy()) {
+    final class SubscriptionExtraEvent extends \Symfony\Component\EventDispatcher\Event
     {
-        $this->extra = $extra;
+        /** @var \ArrayObject */
+        private $extra;
+
+        /**
+         * @param \ArrayObject $extra
+         */
+        public function __construct(\ArrayObject $extra)
+        {
+            $this->extra = $extra;
+        }
+
+        /**
+         * @return \ArrayObject
+         */
+        public function getExtra(): \ArrayObject
+        {
+            return $this->extra;
+        }
     }
-
-    /**
-     * @return \ArrayObject
-     */
-    public function getExtra(): \ArrayObject
+} else {
+    final class SubscriptionExtraEvent extends Event
     {
-        return $this->extra;
+        /** @var \ArrayObject */
+        private $extra;
+
+        /**
+         * @param \ArrayObject $extra
+         */
+        public function __construct(\ArrayObject $extra)
+        {
+            $this->extra = $extra;
+        }
+
+        /**
+         * @return \ArrayObject
+         */
+        public function getExtra(): \ArrayObject
+        {
+            return $this->extra;
+        }
     }
 }

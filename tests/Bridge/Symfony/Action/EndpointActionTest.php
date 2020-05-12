@@ -124,7 +124,7 @@ GQL;
                 'id' => 1,
                 'type' => MessageTypes::GQL_START,
                 'payload' => ['query' => $expectedQuery], ]
-            )
+            ) ?: null
         );
         $request->setMethod('POST');
         $request->headers->set('Content-Type', 'application/json;charset=utf8');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLSubscription\Bridge\Symfony\Action;
 
+use Overblog\GraphQLSubscription\Bridge\Symfony\Event\EventDispatcherVersionHelper;
 use Overblog\GraphQLSubscription\Bridge\Symfony\Event\SubscriptionExtraEvent;
 use Overblog\GraphQLSubscription\MessageTypes;
 use Overblog\GraphQLSubscription\Request\JsonParser;
@@ -29,13 +30,15 @@ class EndpointAction
         ?EventDispatcherInterface $dispatcher = null,
         ?string $schemaName = null
     ): Response {
-        return $this->createJsonResponse($request, function (Request $request) use ($schemaName, $subscriptionManager, $dispatcher): array {
+        return $this->createJsonResponse($request, function (Request $request) use ($schemaName, $subscriptionManager, $dispatcher): ?array {
             [$type, $id, $payload] = ($this->requestParser)($request);
             try {
                 $extra = [];
                 if ($dispatcher && MessageTypes::GQL_START === $type) {
                     $extra = new \ArrayObject($extra);
-                    $dispatcher->dispatch(SubscriptionExtraEvent::class, new SubscriptionExtraEvent($extra));
+                    EventDispatcherVersionHelper::dispatch(
+                        $dispatcher, new SubscriptionExtraEvent($extra), SubscriptionExtraEvent::class
+                    );
                     $extra = $extra->getArrayCopy();
                 }
 

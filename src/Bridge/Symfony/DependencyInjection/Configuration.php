@@ -25,7 +25,7 @@ class Configuration implements ConfigurationInterface
     public function getConfigTreeBuilder()
     {
         $treeBuilder = new TreeBuilder(self::NAME);
-        $rootNode = self::getRootNodeWithoutDeprecation($treeBuilder, self::NAME);
+        $rootNode = $this->getRootNodeWithoutDeprecation($treeBuilder, self::NAME);
 
         $rootNode
             ->addDefaultsIfNotSet()
@@ -64,8 +64,7 @@ class Configuration implements ConfigurationInterface
     private function mercureHubNode(string $name): ArrayNodeDefinition
     {
         $builder = new TreeBuilder($name);
-        /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, $name);
+        $node = $this->getRootNodeWithoutDeprecation($builder, $name);
         $node
             ->isRequired()
             ->addDefaultsIfNotSet()
@@ -84,7 +83,10 @@ class Configuration implements ConfigurationInterface
                     ->info('Public URL of mercure hub endpoint.')
                     ->example('https://public.example.com/hub')
                 ->end()
-                ->append($this->callableServiceNode('http_client', false))
+                ->scalarNode('http_client')
+                    ->defaultNull()
+                    ->info('The ID of the http client service.')
+                ->end()
                 ->arrayNode('publish')
                     ->addDefaultsIfNotSet()
                     ->children()
@@ -114,8 +116,7 @@ class Configuration implements ConfigurationInterface
     private function callableServiceNode(string $name, bool $isRequired = true): ArrayNodeDefinition
     {
         $builder = new TreeBuilder($name);
-        /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, $name);
+        $node = $this->getRootNodeWithoutDeprecation($builder, $name);
         if ($isRequired) {
             $node->isRequired();
         }
@@ -138,18 +139,9 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    /**
-     * @internal
-     *
-     * @param TreeBuilder $builder
-     * @param string|null $name
-     * @param string      $type
-     *
-     * @return ArrayNodeDefinition|\Symfony\Component\Config\Definition\Builder\NodeDefinition
-     */
-    public static function getRootNodeWithoutDeprecation(TreeBuilder $builder, string $name, string $type = 'array')
+    private function getRootNodeWithoutDeprecation(TreeBuilder $builder, string $name): ArrayNodeDefinition
     {
         // BC layer for symfony/config 4.1 and older
-        return \method_exists($builder, 'getRootNode') ? $builder->getRootNode() : $builder->root($name, $type);
+        return \method_exists($builder, 'getRootNode') ? $builder->getRootNode() : $builder->root($name);
     }
 }
